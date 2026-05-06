@@ -1,6 +1,10 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error("JWT_SECRET environment variable must be set in production");
+}
+
 const SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "matrix-supply-secret-key-change-in-production"
 );
@@ -38,10 +42,12 @@ export async function getSession(): Promise<SessionPayload | null> {
   return verifySession(token);
 }
 
+const SECURE = process.env.NODE_ENV === "production" ? "; Secure" : "";
+
 export function setSessionCookie(response: Response, token: string): Response {
   response.headers.append(
     "Set-Cookie",
-    `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 3600}`
+    `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax${SECURE}; Max-Age=${7 * 24 * 3600}`
   );
   return response;
 }

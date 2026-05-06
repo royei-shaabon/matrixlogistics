@@ -35,7 +35,11 @@ export default function LoginPage() {
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
       if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return;
-      setError("שגיאה בכניסה עם גוגל, נסה שנית");
+      if (code === "auth/account-exists-with-different-credential") {
+        setError("חשבון עם מייל זה כבר קיים עם סיסמה. אנא היכנס עם מייל וסיסמה.");
+      } else {
+        setError("שגיאה בכניסה עם גוגל, נסה שנית");
+      }
     } finally {
       setGoogleLoading(false);
     }

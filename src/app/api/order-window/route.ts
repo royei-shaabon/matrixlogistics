@@ -7,6 +7,9 @@ import { randomUUID } from "crypto";
 const WINDOW_DOC = "current";
 
 export async function GET() {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "לא מחובר" }, { status: 401 });
+
   const db = getAdminDb();
   const doc = await db.collection(COLLECTIONS.orderWindow).doc(WINDOW_DOC).get();
   if (!doc.exists) return NextResponse.json({ window: null });

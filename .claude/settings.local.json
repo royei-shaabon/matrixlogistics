@@ -15,7 +15,8 @@
       "Bash(Write-Host \"done\")",
       "Bash(npm run *)",
       "Bash(Remove-Item -Recurse -Force \"c:\\\\Users\\\\shaab\\\\Desktop\\\\matrix-supply-order\\\\src\\\\app\\\\api\\\\admin\\\\sections\")",
-      "Bash(Remove-Item -Recurse -Force \"c:\\\\Users\\\\shaab\\\\Desktop\\\\matrix-supply-order\\\\src\\\\app\\\\admin\\\\sections\")"
+      "Bash(Remove-Item -Recurse -Force \"c:\\\\Users\\\\shaab\\\\Desktop\\\\matrix-supply-order\\\\src\\\\app\\\\admin\\\\sections\")",
+      "PowerShell(Copy-Item \"c:\\\\Users\\\\shaab\\\\Desktop\\\\matrix-supply-order\\\\logistic_logo.png\" \"c:\\\\Users\\\\shaab\\\\Desktop\\\\matrix-supply-order\\\\src\\\\app\\\\icon.png\" -Force)"
     ]
   }
 }

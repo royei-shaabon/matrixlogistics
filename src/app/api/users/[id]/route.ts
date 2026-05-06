@@ -15,6 +15,13 @@ export async function PATCH(
   const { id } = await params;
   const body = await req.json();
 
+  if (body.role !== undefined && !["admin", "user"].includes(body.role)) {
+    return NextResponse.json({ error: "ערך role לא תקין" }, { status: 400 });
+  }
+  if (body.status !== undefined && !["pending", "approved"].includes(body.status)) {
+    return NextResponse.json({ error: "ערך status לא תקין" }, { status: 400 });
+  }
+
   const update: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
   const allowed = ["fullName", "branch", "department", "role", "status", "phoneNumber"] as const;
   for (const key of allowed) {

@@ -62,9 +62,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "המשתמש לא מאושר" }, { status: 403 });
   }
 
-  const { items } = await req.json() as {
-    items: { product_id: number; quantity: number; notes?: string }[];
-  };
+  const body = await req.json();
+  const { items } = body as { items: { product_id: number; quantity: number; notes?: string }[] };
+  if (!Array.isArray(items)) {
+    return NextResponse.json({ error: "בקשה לא תקינה" }, { status: 400 });
+  }
 
   // Get or create order for this user + window
   let orderId: string;
