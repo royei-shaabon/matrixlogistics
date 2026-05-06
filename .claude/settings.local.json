@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:3000/api/auth/me\" -UseBasicParsing)",
+      "PowerShell($response = Invoke-WebRequest -Uri \"http://localhost:3000/api/auth/me\" -UseBasicParsing -ErrorAction SilentlyContinue; Write-Host \"Status: $\\($response.StatusCode\\)\"; Write-Host \"Content: $\\($response.Content\\)\")",
+      "PowerShell($body = '{\"token\":\"test123\"}'; $response = Invoke-WebRequest -Uri \"http://localhost:3000/api/auth/login\" -Method POST -Body $body -ContentType \"application/json\" -UseBasicParsing -ErrorAction SilentlyContinue; Write-Host \"Status: $\\($response.StatusCode\\)\"; Write-Host \"Content: $\\($response.Content\\)\")",
+      "PowerShell($body = '{\"token\":\"test123\"}'; try { $response = Invoke-WebRequest -Uri \"http://localhost:3000/api/auth/login\" -Method POST -Body $body -ContentType \"application/json\" -UseBasicParsing } catch { $response = $_.Exception.Response; $reader = New-Object System.IO.StreamReader\\($response.GetResponseStream\\(\\)\\); $content = $reader.ReadToEnd\\(\\); Write-Host \"Status: $\\($response.StatusCode\\)\"; Write-Host \"Content: $content\" })",
+      "PowerShell(try { $response = Invoke-WebRequest -Uri \"http://localhost:3000/api/users\" -UseBasicParsing } catch { $response = $_.Exception.Response; $reader = New-Object System.IO.StreamReader\\($response.GetResponseStream\\(\\)\\); $content = $reader.ReadToEnd\\(\\); Write-Host \"Status: $\\($response.StatusCode\\)\"; Write-Host \"Content: $content\" })"
+    ]
+  }
+}
