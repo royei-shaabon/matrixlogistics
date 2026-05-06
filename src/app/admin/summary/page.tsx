@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 
@@ -85,7 +85,7 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-export default function SummaryPage() {
+function SummaryPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [summary, setSummary] = useState<SummaryRow[]>([]);
@@ -572,5 +572,13 @@ export default function SummaryPage() {
 
       <BottomNav isAdmin />
     </div>
+  );
+}
+
+export default function SummaryPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={{ color: "#94A3B8" }}>טוען...</div>}>
+      <SummaryPageInner />
+    </Suspense>
   );
 }
