@@ -12,7 +12,7 @@ export default async function Home() {
     redirect("/admin");
   }
 
-  if (session.status === "pending" && session.role !== "admin") {
+  if (session.status === "pending") {
     redirect("/pending");
   }
 

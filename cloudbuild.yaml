@@ -1,0 +1,39 @@
+steps:
+  # Build Docker image
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - build
+      - -t
+      - "me-west1-docker.pkg.dev/$PROJECT_ID/matrix-supply/app:$_ENV"
+      - .
+
+  # Push to Artifact Registry
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - push
+      - "me-west1-docker.pkg.dev/$PROJECT_ID/matrix-supply/app:$_ENV"
+
+  # Deploy to Cloud Run
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - "matrix-supply-$_ENV"
+      - "--image=me-west1-docker.pkg.dev/$PROJECT_ID/matrix-supply/app:$_ENV"
+      - "--platform=managed"
+      - "--region=me-west1"
+      - "--allow-unauthenticated"
+      - "--set-secrets=JWT_SECRET=jwt-secret-$_ENV:latest"
+      - "--set-env-vars=NODE_ENV=production"
+      - "--min-instances=0"
+      - "--memory=512Mi"
+
+images:
+  - "me-west1-docker.pkg.dev/$PROJECT_ID/matrix-supply/app:$_ENV"
+
+substitutions:
+  _ENV: prod  # overridden per trigger (prod / dev)
+
+options:
+  logging: CLOUD_LOGGING_ONLY

@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { PRODUCTS, CATEGORIES } from "@/lib/products";
+import BottomNav from "@/components/BottomNav";
 
 interface OrderWindow {
   windowId: string;
@@ -45,14 +45,9 @@ export default function OrderPage() {
       setUserName(d.user.fullName || d.user.name || "");
       setIsAdmin(d.user.role === "admin");
     });
-
     fetch("/api/order-window").then((r) => r.json()).then((d) => {
-      if (d.window) {
-        setOrderWindow(d.window);
-        checkWindowOpen(d.window);
-      }
+      if (d.window) { setOrderWindow(d.window); checkWindowOpen(d.window); }
     });
-
     fetch("/api/orders").then((r) => r.json()).then((d) => {
       if (d.items) {
         const map: OrderEntry = {};
@@ -70,40 +65,40 @@ export default function OrderPage() {
     return () => clearInterval(t);
   }, [orderWindow, checkWindowOpen]);
 
-  function handleChange(productId: number, field: "quantity" | "notes", value: string) {
+  function setQty(productId: number, delta: number) {
+    setEntries((prev) => {
+      const current = parseInt(prev[productId]?.quantity || "0");
+      const next = Math.max(0, current + delta);
+      return {
+        ...prev,
+        [productId]: { quantity: next === 0 ? "" : String(next), notes: prev[productId]?.notes || "" },
+      };
+    });
+    setSaved(false);
+  }
+
+  function setNotes(productId: number, value: string) {
     setEntries((prev) => ({
       ...prev,
-      [productId]: {
-        quantity: prev[productId]?.quantity || "",
-        notes: prev[productId]?.notes || "",
-        [field]: value,
-      },
+      [productId]: { quantity: prev[productId]?.quantity || "", notes: value },
     }));
     setSaved(false);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit() {
     setError("");
     setSaving(true);
-
     const items = Object.entries(entries)
       .filter(([, v]) => v.quantity && parseInt(v.quantity) > 0)
-      .map(([id, v]) => ({
-        product_id: parseInt(id),
-        quantity: parseInt(v.quantity),
-        notes: v.notes || undefined,
-      }));
+      .map(([id, v]) => ({ product_id: parseInt(id), quantity: parseInt(v.quantity), notes: v.notes || undefined }));
 
     const res = await fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ items }),
     });
-
     const data = await res.json();
     setSaving(false);
-
     if (!res.ok) { setError(data.error || "שגיאה בשמירה"); return; }
     setSaved(true);
   }
@@ -116,134 +111,210 @@ export default function OrderPage() {
     router.push("/login");
   }
 
-  const totalItems = Object.values(entries).filter(
-    (v) => v.quantity && parseInt(v.quantity) > 0
-  ).length;
+  const totalItems = Object.values(entries).filter((v) => v.quantity && parseInt(v.quantity) > 0).length;
 
   return (
-    <div className="min-h-screen">
-      <header className="bg-blue-700 text-white px-4 py-3 flex items-center justify-between shadow">
+    <div className="min-h-screen" style={{ background: "#F9FBFD", paddingBottom: "80px" }}>
+      {/* Header */}
+      <div className="px-4 pt-6 pb-4 flex items-start justify-between">
         <div>
-          <h1 className="font-bold text-lg">הזמנת אספקה — מטריקס</h1>
-          {userName && <p className="text-blue-200 text-xs">שלום, {userName}</p>}
+          <p className="text-sm font-medium" style={{ color: "#64748B" }}>שלום,</p>
+          <h1 className="text-xl font-bold" style={{ color: "#1E293B" }}>{userName || "..."}</h1>
         </div>
-        <div className="flex items-center gap-4">
-          {isAdmin && (
-            <Link href="/admin" className="text-blue-200 hover:text-white text-sm underline">
-              לוח מנהל
-            </Link>
-          )}
-          <button onClick={handleLogout} className="text-blue-200 hover:text-white text-sm underline">
-            יציאה
-          </button>
-        </div>
-      </header>
+        <button
+          onClick={handleLogout}
+          className="mt-1 text-xs font-medium px-3 py-1.5 rounded-xl border transition-colors"
+          style={{ color: "#64748B", borderColor: "#DCE7F3", background: "#FFFFFF" }}
+        >
+          יציאה
+        </button>
+      </div>
 
-      <div className="max-w-4xl mx-auto p-4">
+      <div className="px-4 space-y-3">
+        {/* Window status */}
         {orderWindow ? (
-          <div className={`rounded-xl border p-4 mb-6 ${windowOpen ? "bg-green-50 border-green-300 text-green-800" : "bg-red-50 border-red-300 text-red-800"}`}>
-            <div className="font-semibold text-sm mb-1">
-              {windowOpen ? "✅ ההזמנה פתוחה" : "🔒 ההזמנה סגורה"}
+          <div
+            className="rounded-[18px] p-4"
+            style={{
+              background: windowOpen ? "#F0FDF4" : "#FFF7ED",
+              border: `1px solid ${windowOpen ? "#BBF7D0" : "#FED7AA"}`,
+            }}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-base">{windowOpen ? "✅" : "🔒"}</span>
+              <span className="font-semibold text-sm" style={{ color: windowOpen ? "#15803D" : "#C2410C" }}>
+                {windowOpen ? "הגשת בקשות פתוחה" : "הגשת בקשות סגורה"}
+              </span>
             </div>
-            <div className="text-xs">
+            <p className="text-xs mr-6" style={{ color: windowOpen ? "#16A34A" : "#EA580C" }}>
               {formatDate(orderWindow.startDateTime)} — {formatDate(orderWindow.endDateTime)}
-            </div>
+            </p>
           </div>
         ) : (
-          <div className="rounded-xl border border-yellow-300 bg-yellow-50 text-yellow-800 p-4 mb-6 text-sm">
-            לא הוגדר חלון הזמנה על ידי המנהל עדיין.
+          <div
+            className="rounded-[18px] p-4 text-sm"
+            style={{ background: "#FFFBEB", border: "1px solid #FDE68A", color: "#92400E" }}
+          >
+            לא הוגדר חלון הגשה על ידי המנהל עדיין.
           </div>
         )}
 
-        {windowOpen && (
-          saved ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-green-200 p-10 text-center">
-              <div className="text-5xl mb-4">✅</div>
-              <h2 className="text-xl font-bold text-green-800 mb-2">בקשתך הוגשה בהצלחה!</h2>
-              <p className="text-gray-500 text-sm mb-6">
-                תוכל לערוך אותה עד{" "}
-                <span className="font-semibold text-gray-700">
-                  {formatDate(orderWindow!.endDateTime)}
-                </span>
-              </p>
-              <button
-                onClick={() => setSaved(false)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl px-6 py-2.5 text-sm transition-colors"
+        {/* Success state */}
+        {windowOpen && saved && (
+          <div
+            className="rounded-[18px] p-8 text-center"
+            style={{ background: "#FFFFFF", border: "1px solid #BBF7D0", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}
+          >
+            <div
+              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 mx-auto"
+              style={{ background: "#F0FDF4" }}
+            >
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-bold mb-1" style={{ color: "#15803D" }}>בקשתך הוגשה בהצלחה</h2>
+            <p className="text-sm mb-6" style={{ color: "#64748B" }}>
+              תוכל לערוך אותה עד{" "}
+              <span className="font-semibold" style={{ color: "#1E293B" }}>
+                {formatDate(orderWindow!.endDateTime)}
+              </span>
+            </p>
+            <button
+              onClick={() => setSaved(false)}
+              className="font-semibold text-sm px-6 py-3 rounded-[14px] text-white transition-colors"
+              style={{ background: "#3B82F6" }}
+            >
+              ערוך בקשה
+            </button>
+          </div>
+        )}
+
+        {/* Product list */}
+        {windowOpen && !saved && (
+          <>
+            {CATEGORIES.map((cat) => {
+              const products = PRODUCTS.filter((p) => p.category === cat);
+              return (
+                <div key={cat}>
+                  <h2 className="text-xs font-bold uppercase tracking-wider mb-2 px-1" style={{ color: "#94A3B8" }}>
+                    {cat}
+                  </h2>
+                  <div
+                    className="rounded-[18px] overflow-hidden"
+                    style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}
+                  >
+                    {products.map((product, idx) => {
+                      const entry = entries[product.id];
+                      const qty = parseInt(entry?.quantity || "0");
+                      const hasValue = qty > 0;
+
+                      return (
+                        <div
+                          key={product.id}
+                          className="px-4 py-3"
+                          style={{
+                            borderTop: idx > 0 ? "1px solid #F1F5F9" : undefined,
+                            background: hasValue ? "#EFF6FF" : undefined,
+                          }}
+                        >
+                          {/* Product name */}
+                          <div className="flex items-center justify-between mb-2.5">
+                            <span
+                              className="text-sm font-medium leading-snug flex-1 ml-3"
+                              style={{ color: hasValue ? "#1D4ED8" : "#1E293B" }}
+                            >
+                              {product.name}
+                            </span>
+                            {hasValue && (
+                              <span
+                                className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
+                                style={{ background: "#DBEAFE", color: "#1D4ED8" }}
+                              >
+                                {qty}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Stepper + notes */}
+                          <div className="flex items-center gap-3">
+                            {/* Stepper */}
+                            <div
+                              className="flex items-center rounded-xl overflow-hidden flex-shrink-0"
+                              style={{ border: "1px solid #DCE7F3", background: "#F8FAFC" }}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => setQty(product.id, -1)}
+                                className="flex items-center justify-center text-lg font-light transition-colors"
+                                style={{ width: "40px", height: "40px", color: qty === 0 ? "#CBD5E1" : "#64748B" }}
+                              >
+                                −
+                              </button>
+                              <span
+                                className="text-sm font-bold text-center"
+                                style={{ width: "36px", color: hasValue ? "#1D4ED8" : "#94A3B8" }}
+                              >
+                                {qty === 0 ? "0" : qty}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setQty(product.id, 1)}
+                                className="flex items-center justify-center text-lg transition-colors"
+                                style={{ width: "40px", height: "40px", color: "#3B82F6" }}
+                              >
+                                +
+                              </button>
+                            </div>
+
+                            {/* Notes */}
+                            <input
+                              type="text"
+                              value={entry?.notes || ""}
+                              onChange={(e) => setNotes(product.id, e.target.value)}
+                              placeholder="הערה..."
+                              className="flex-1 text-sm px-3 focus:outline-none focus:ring-1 focus:ring-blue-300 transition-shadow"
+                              style={{ height: "40px", borderRadius: "10px", border: "1px solid #DCE7F3", background: "#F8FAFC" }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Error */}
+            {error && (
+              <div
+                className="rounded-xl px-4 py-3 text-sm font-medium"
+                style={{ background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA" }}
               >
-                ערוך בקשה
+                {error}
+              </div>
+            )}
+
+            {/* Sticky submit */}
+            <div className="pt-2 pb-2">
+              <button
+                onClick={handleSubmit}
+                disabled={saving || totalItems === 0}
+                className="w-full text-white font-semibold text-sm transition-all"
+                style={{
+                  height: "54px",
+                  borderRadius: "14px",
+                  background: saving || totalItems === 0 ? "#93C5FD" : "#3B82F6",
+                }}
+              >
+                {saving ? "שולח..." : totalItems > 0 ? `הגש בקשה · ${totalItems} פריטים` : "הגש בקשה"}
               </button>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-4">
-                <div className="grid grid-cols-12 bg-gray-100 border-b border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700">
-                  <div className="col-span-5">פריט</div>
-                  <div className="col-span-3 text-center">כמות להזמנה</div>
-                  <div className="col-span-4">הערות להזמנה</div>
-                </div>
-
-                {CATEGORIES.map((cat) => {
-                  const products = PRODUCTS.filter((p) => p.category === cat);
-                  return (
-                    <div key={cat}>
-                      <div className="bg-blue-50 px-4 py-1.5 text-xs font-bold text-blue-700 border-b border-blue-100 uppercase tracking-wide">
-                        {cat}
-                      </div>
-                      {products.map((product, idx) => {
-                        const entry = entries[product.id];
-                        const hasValue = entry?.quantity && parseInt(entry.quantity) > 0;
-                        return (
-                          <div
-                            key={product.id}
-                            className={`grid grid-cols-12 items-center px-4 py-2 text-sm border-b border-gray-100 ${hasValue ? "bg-blue-50" : idx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
-                          >
-                            <div className="col-span-5 text-gray-800">{product.name}</div>
-                            <div className="col-span-3 flex justify-center">
-                              <input
-                                type="number"
-                                min="0"
-                                value={entry?.quantity || ""}
-                                onChange={(e) => handleChange(product.id, "quantity", e.target.value)}
-                                placeholder="0"
-                                className="w-20 border border-gray-300 rounded-lg px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                              />
-                            </div>
-                            <div className="col-span-4">
-                              <input
-                                type="text"
-                                value={entry?.notes || ""}
-                                onChange={(e) => handleChange(product.id, "notes", e.target.value)}
-                                placeholder="הערה (אופציונלי)"
-                                className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-300 bg-transparent"
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="flex items-center justify-between gap-4 flex-wrap">
-                <div className="text-sm text-gray-500">
-                  {totalItems > 0 ? `${totalItems} פריטים נבחרו` : "לא נבחרו פריטים עדיין"}
-                </div>
-                <div className="flex items-center gap-3">
-                  {error && <span className="text-red-600 text-sm">{error}</span>}
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-xl px-6 py-2.5 text-sm transition-colors"
-                  >
-                    {saving ? "שולח..." : "הגש בקשה"}
-                  </button>
-                </div>
-              </div>
-            </form>
-          )
+          </>
         )}
       </div>
+
+      <BottomNav isAdmin={isAdmin} />
     </div>
   );
 }

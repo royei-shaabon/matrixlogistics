@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import BottomNav from "@/components/BottomNav";
 
 interface SummaryRow {
   itemId: number;
@@ -59,23 +59,13 @@ function groupByUser(details: DetailRow[]): UserOrder[] {
   for (const row of details) {
     if (!map.has(row.userId)) {
       map.set(row.userId, {
-        userId: row.userId,
-        userFullName: row.userFullName,
-        email: row.email,
-        branch: row.branch,
-        department: row.department,
-        items: [],
+        userId: row.userId, userFullName: row.userFullName,
+        email: row.email, branch: row.branch, department: row.department, items: [],
       });
     }
-    map.get(row.userId)!.items.push({
-      itemName: row.itemName,
-      quantity: row.quantity,
-      orderNote: row.orderNote,
-    });
+    map.get(row.userId)!.items.push({ itemName: row.itemName, quantity: row.quantity, orderNote: row.orderNote });
   }
-  return Array.from(map.values()).sort((a, b) =>
-    a.userFullName.localeCompare(b.userFullName, "he")
-  );
+  return Array.from(map.values()).sort((a, b) => a.userFullName.localeCompare(b.userFullName, "he"));
 }
 
 export default function SummaryPage() {
@@ -154,45 +144,49 @@ export default function SummaryPage() {
 
   const userOrders = groupByUser(details);
   const departments = [...new Set(userOrders.map((u) => u.department))];
-
-  // Detect departments with multiple users
   const deptUserCount: Record<string, number> = {};
-  for (const u of userOrders) {
-    deptUserCount[u.department] = (deptUserCount[u.department] || 0) + 1;
-  }
-
-  const totalQuantity = summary.reduce((acc, r) => acc + r.total, 0);
+  for (const u of userOrders) deptUserCount[u.department] = (deptUserCount[u.department] || 0) + 1;
+  const totalQty = summary.reduce((acc, r) => acc + r.total, 0);
 
   return (
-    <div className="min-h-screen">
-      <header className="bg-blue-700 text-white px-4 py-3 flex items-center justify-between shadow print:hidden">
-        <div className="flex items-center gap-3">
-          <Link href="/admin" className="text-blue-200 hover:text-white text-sm">← חזרה</Link>
-          <h1 className="font-bold text-lg">סיכום הזמנות</h1>
+    <div className="min-h-screen" style={{ background: "#F9FBFD", paddingBottom: "90px" }}>
+      {/* Header */}
+      <div className="px-4 pt-6 pb-4 flex items-center justify-between print:hidden">
+        <div>
+          <h1 className="text-xl font-bold" style={{ color: "#1E293B" }}>סיכום הזמנות</h1>
+          {!loading && (
+            <p className="text-sm mt-0.5" style={{ color: "#64748B" }}>
+              {userOrders.length} משתמשים · {totalQty} יחידות
+            </p>
+          )}
         </div>
         <button
           onClick={handleExportPDF}
           disabled={pdfLoading}
-          className="bg-white text-blue-700 text-sm font-medium rounded-lg px-4 py-1.5 hover:bg-blue-50 disabled:opacity-50 flex items-center gap-2"
+          className="text-sm font-semibold px-4 transition-all print:hidden"
+          style={{ height: "40px", borderRadius: "12px", background: "#1E293B", color: "#FFFFFF", opacity: pdfLoading ? 0.5 : 1 }}
         >
-          {pdfLoading ? "מייצא..." : "⬇️ ייצוא PDF"}
+          {pdfLoading ? "..." : "PDF ⬇"}
         </button>
-      </header>
+      </div>
 
-      <div className="max-w-6xl mx-auto p-4">
+      <div className="px-4 space-y-3">
         {/* Department legend */}
         {departments.length > 1 && (
-          <div className="flex flex-wrap gap-2 mb-4 print:hidden">
-            <span className="text-xs text-gray-500 self-center">מדור:</span>
+          <div className="flex flex-wrap gap-2 print:hidden">
             {departments.map((dept) => (
               <span
                 key={dept}
-                className="text-xs px-2 py-0.5 rounded-full border border-gray-200 font-medium inline-flex items-center gap-1"
-                style={{ backgroundColor: getDeptColor(dept) }}
+                className="text-xs px-3 py-1 rounded-full border font-medium inline-flex items-center gap-1.5"
+                style={{ backgroundColor: getDeptColor(dept), borderColor: "rgba(0,0,0,0.08)", color: "#1E293B" }}
               >
+                <span
+                  className="w-2 h-2 rounded-full inline-block flex-shrink-0"
+                  style={{ backgroundColor: getDeptColor(dept), border: "1.5px solid rgba(0,0,0,0.2)" }}
+                />
                 {dept}
                 {deptUserCount[dept] > 1 && (
-                  <span className="bg-orange-400 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none">
+                  <span className="text-[10px] font-bold px-1 rounded" style={{ background: "#F59E0B", color: "#FFFFFF" }}>
                     {deptUserCount[dept]}
                   </span>
                 )}
@@ -202,118 +196,148 @@ export default function SummaryPage() {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-4 print:hidden">
+        <div className="flex gap-2 print:hidden">
           {(["summary", "details"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${activeTab === tab ? "bg-blue-600 text-white" : "bg-white border border-gray-300 text-gray-600 hover:bg-gray-50"}`}
+              className="px-4 py-1.5 rounded-full text-sm font-medium transition-all"
+              style={{
+                background: activeTab === tab ? "#3B82F6" : "#FFFFFF",
+                color: activeTab === tab ? "#FFFFFF" : "#64748B",
+                border: `1px solid ${activeTab === tab ? "#3B82F6" : "#DCE7F3"}`,
+              }}
             >
-              {tab === "summary" ? "סיכום כמויות" : `הזמנות לפי משתמש (${userOrders.length})`}
+              {tab === "summary" ? "סיכום כמויות" : `לפי משתמש (${userOrders.length})`}
             </button>
           ))}
         </div>
 
         {loading ? (
-          <div className="text-center text-gray-400 py-12">טוען...</div>
+          <div className="text-center py-16" style={{ color: "#94A3B8" }}>טוען...</div>
         ) : (
           <>
             {/* Summary tab */}
             <div className={activeTab === "summary" ? "" : "hidden"}>
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                  <h2 className="font-bold text-gray-800">סיכום כמויות</h2>
-                  <span className="text-sm text-gray-500">סה״כ {totalQuantity} יחידות</span>
+              {summary.length === 0 ? (
+                <div
+                  className="rounded-[18px] p-10 text-center text-sm"
+                  style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", color: "#94A3B8" }}
+                >
+                  אין הזמנות עדיין
                 </div>
-                {summary.length === 0 ? (
-                  <div className="text-center text-gray-400 py-12">אין הזמנות עדיין</div>
-                ) : (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-gray-50 border-b border-gray-200">
-                        <th className="text-right px-4 py-3 font-semibold text-gray-700">פריט</th>
-                        <th className="text-center px-4 py-3 font-semibold text-gray-700 w-28">סך כמות</th>
-                        <th className="text-right px-4 py-3 font-semibold text-gray-700">הערות</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {summary.map((row, i) => (
-                        <tr key={row.itemId} className={`border-b border-gray-100 ${i % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
-                          <td className="px-4 py-2.5 text-gray-800">{row.itemName}</td>
-                          <td className="px-4 py-2.5 text-center font-bold text-blue-700 text-base">{row.total}</td>
-                          <td className="px-4 py-2.5 text-gray-400 text-xs">{row.notes || "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
+              ) : (
+                <div className="space-y-2">
+                  {summary.map((row) => (
+                    <div
+                      key={row.itemId}
+                      className="rounded-[18px] px-4 py-3 flex items-center justify-between gap-3"
+                      style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}
+                    >
+                      <span className="text-sm font-medium flex-1" style={{ color: "#1E293B" }}>{row.itemName}</span>
+                      {row.notes && (
+                        <span className="text-xs truncate max-w-[100px]" style={{ color: "#94A3B8" }}>{row.notes}</span>
+                      )}
+                      <span
+                        className="text-base font-bold flex-shrink-0 min-w-[36px] text-center"
+                        style={{ color: "#3B82F6" }}
+                      >
+                        {row.total}
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Total row */}
+                  <div
+                    className="rounded-[18px] px-4 py-3 flex items-center justify-between"
+                    style={{ background: "#EFF6FF", border: "1px solid #BFDBFE" }}
+                  >
+                    <span className="text-sm font-bold" style={{ color: "#1D4ED8" }}>סה״כ</span>
+                    <span className="text-lg font-bold" style={{ color: "#1D4ED8" }}>{totalQty}</span>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Details tab — grouped by user */}
+            {/* Details tab */}
             <div className={activeTab === "details" ? "" : "hidden"}>
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-200">
-                  <h2 className="font-bold text-gray-800">הזמנות לפי משתמש</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">לחץ על שורה להרחבת הפריטים</p>
+              {userOrders.length === 0 ? (
+                <div
+                  className="rounded-[18px] p-10 text-center text-sm"
+                  style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", color: "#94A3B8" }}
+                >
+                  אין הזמנות עדיין
                 </div>
-                {userOrders.length === 0 ? (
-                  <div className="text-center text-gray-400 py-12">אין הזמנות עדיין</div>
-                ) : (
-                  <div>
-                    {/* Header */}
-                    <div className="grid grid-cols-12 bg-gray-50 border-b border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600">
-                      <div className="col-span-1"></div>
-                      <div className="col-span-3">שם מלא</div>
-                      <div className="col-span-2">ענף</div>
-                      <div className="col-span-3">מדור</div>
-                      <div className="col-span-2 text-center">פריטים</div>
-                      <div className="col-span-1"></div>
-                    </div>
+              ) : (
+                <div className="space-y-2">
+                  {userOrders.map((user) => {
+                    const isOpen = expanded.has(user.userId);
+                    const deptColor = getDeptColor(user.department);
+                    const isDuplDept = deptUserCount[user.department] > 1;
 
-                    {userOrders.map((user) => {
-                      const isOpen = expanded.has(user.userId);
-                      const deptColor = getDeptColor(user.department);
-                      const isDuplDept = deptUserCount[user.department] > 1;
-
-                      return (
-                        <div key={user.userId} className="border-b border-gray-100 last:border-0">
+                    return (
+                      <div key={user.userId}>
+                        {/* User card */}
+                        <div
+                          className="rounded-[18px] overflow-hidden"
+                          style={{
+                            background: "#FFFFFF",
+                            border: "1px solid #DCE7F3",
+                            boxShadow: "0px 4px 12px rgba(15,23,42,0.06)",
+                          }}
+                        >
                           {/* User row */}
                           <div
-                            onClick={() => toggleExpand(user.userId)}
                             role="button"
                             tabIndex={0}
+                            onClick={() => toggleExpand(user.userId)}
                             onKeyDown={(e) => e.key === "Enter" && toggleExpand(user.userId)}
-                            className="w-full grid grid-cols-12 items-center px-4 py-3 text-sm text-right hover:bg-gray-50 transition-colors cursor-pointer"
-                            style={{ backgroundColor: isOpen ? deptColor : undefined }}
+                            className="px-4 py-3.5 flex items-center gap-3 cursor-pointer transition-colors"
+                            style={{ background: isOpen ? deptColor : undefined }}
                           >
-                            <div className="col-span-1 text-gray-400 text-base">
+                            <span className="text-sm" style={{ color: "#94A3B8" }}>
                               {isOpen ? "▾" : "▸"}
-                            </div>
-                            <div className="col-span-3 font-medium text-gray-900">{user.userFullName}</div>
-                            <div className="col-span-2 text-gray-600">{user.branch}</div>
-                            <div className="col-span-3 flex items-center gap-1.5">
-                              <span
-                                className="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0"
-                                style={{ backgroundColor: deptColor, border: "1.5px solid rgba(0,0,0,0.15)" }}
-                              />
-                              <span className="text-gray-700">{user.department}</span>
-                              {isDuplDept && (
-                                <span className="bg-orange-100 text-orange-700 text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none">
-                                  כפול
+                            </span>
+
+                            <div
+                              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                              style={{ background: deptColor, border: "1.5px solid rgba(0,0,0,0.15)" }}
+                            />
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-sm truncate" style={{ color: "#1E293B" }}>
+                                  {user.userFullName}
                                 </span>
-                              )}
+                                {isDuplDept && (
+                                  <span
+                                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
+                                    style={{ background: "#FEF3C7", color: "#92400E" }}
+                                  >
+                                    כפול
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs mt-0.5" style={{ color: "#64748B" }}>
+                                {user.branch} · {user.department}
+                              </p>
                             </div>
-                            <div className="col-span-2 text-center">
-                              <span className="inline-block bg-blue-100 text-blue-700 text-xs font-bold rounded-full px-2 py-0.5">
+
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <span
+                                className="text-xs font-bold px-2 py-0.5 rounded-full"
+                                style={{ background: "#DBEAFE", color: "#1D4ED8" }}
+                              >
                                 {user.items.length} פריטים
                               </span>
-                            </div>
-                            <div className="col-span-1 text-left">
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleDelete(user.userId, user.userFullName); }}
                                 disabled={deleting === user.userId}
-                                className="text-red-400 hover:text-red-600 disabled:opacity-40 text-xs border border-red-200 rounded px-2 py-0.5 hover:bg-red-50 transition-colors"
+                                className="text-xs px-2.5 py-1 rounded-lg border transition-colors"
+                                style={{
+                                  color: "#EF4444", borderColor: "#FECACA", background: "transparent",
+                                  opacity: deleting === user.userId ? 0.4 : 1,
+                                }}
                               >
                                 {deleting === user.userId ? "..." : "מחק"}
                               </button>
@@ -322,33 +346,32 @@ export default function SummaryPage() {
 
                           {/* Expanded items */}
                           {isOpen && (
-                            <div style={{ backgroundColor: deptColor }} className="border-t border-white/60">
-                              <table className="w-full text-xs">
-                                <thead>
-                                  <tr className="text-gray-500 border-b border-white/60">
-                                    <th className="text-right px-8 py-1.5 font-medium">פריט</th>
-                                    <th className="text-center px-4 py-1.5 font-medium w-20">כמות</th>
-                                    <th className="text-right px-4 py-1.5 font-medium">הערות</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {user.items.map((item, idx) => (
-                                    <tr key={idx} className="border-b border-white/40 last:border-0">
-                                      <td className="px-8 py-1.5 text-gray-800">{item.itemName}</td>
-                                      <td className="px-4 py-1.5 text-center font-bold text-blue-700">{item.quantity}</td>
-                                      <td className="px-4 py-1.5 text-gray-500">{item.orderNote || "—"}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                            <div style={{ background: deptColor, borderTop: "1px solid rgba(255,255,255,0.6)" }}>
+                              {user.items.map((item, idx) => (
+                                <div
+                                  key={idx}
+                                  className="px-4 py-2.5 flex items-center justify-between gap-3"
+                                  style={{ borderTop: idx > 0 ? "1px solid rgba(255,255,255,0.5)" : undefined }}
+                                >
+                                  <span className="text-sm flex-1" style={{ color: "#374151" }}>{item.itemName}</span>
+                                  {item.orderNote && (
+                                    <span className="text-xs truncate max-w-[100px]" style={{ color: "#6B7280" }}>
+                                      {item.orderNote}
+                                    </span>
+                                  )}
+                                  <span className="font-bold text-sm flex-shrink-0" style={{ color: "#1D4ED8" }}>
+                                    {item.quantity}
+                                  </span>
+                                </div>
+                              ))}
                             </div>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </>
         )}
@@ -417,6 +440,8 @@ export default function SummaryPage() {
           </table>
         </div>
       </div>
+
+      <BottomNav isAdmin />
     </div>
   );
 }

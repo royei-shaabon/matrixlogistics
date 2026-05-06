@@ -1,5 +1,5 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
 
 body {
   background: #F9FBFD;
@@ -10,9 +10,4 @@ body {
 
 input, select, textarea, button {
   font-family: 'Heebo', Arial, sans-serif;
-}
-
-/* iOS safe area support */
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 16px);
 }
