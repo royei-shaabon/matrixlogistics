@@ -40,6 +40,7 @@ export const COLLECTIONS = {
   generalOrderDetails: "generalOrderDetails",
   orders: "orders",
   orderItems: "orderItems",
+  sessions: "sessions",
 } as const;
 
 export type UserDoc = {

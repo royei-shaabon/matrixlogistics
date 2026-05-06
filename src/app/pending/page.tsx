@@ -1,9 +1,19 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function PendingPage() {
   const router = useRouter();
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.user) router.push("/login");
+        else if (d.user.status === "approved") router.push("/order");
+      });
+  }, [router]);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });

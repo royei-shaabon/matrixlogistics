@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, createSession, setSessionCookie } from "@/lib/auth";
 import { getAdminDb, COLLECTIONS } from "@/lib/firebase-admin";
 
 export async function GET() {
@@ -11,7 +11,7 @@ export async function GET() {
   if (!doc.exists) return NextResponse.json({ user: null });
 
   const data = doc.data()!;
-  return NextResponse.json({
+  const res = NextResponse.json({
     user: {
       id: doc.id,
       email: data.email,
@@ -20,6 +20,19 @@ export async function GET() {
       department: data.department,
       role: data.role,
       status: data.status,
+      phoneNumber: data.phoneNumber || "",
     },
   });
+
+  if (data.status !== session.status || data.role !== session.role) {
+    const newToken = await createSession({
+      userId: session.userId,
+      email: data.email,
+      role: data.role,
+      status: data.status,
+    });
+    return setSessionCookie(res, newToken);
+  }
+
+  return res;
 }

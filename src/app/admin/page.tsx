@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
 
-interface OrderWindow {
-  windowId: string;
+interface Session {
+  id: string;
+  name: string;
+  status: "open" | "closed";
   startDateTime: string;
   endDateTime: string;
 }
@@ -20,10 +23,6 @@ interface OrderDetails {
   courierNotes: string;
 }
 
-function toLocalInput(iso: string) {
-  return new Date(iso).toISOString().slice(0, 16);
-}
-
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString("he-IL", {
     day: "2-digit", month: "2-digit", year: "numeric",
@@ -33,17 +32,13 @@ function formatDate(iso: string) {
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [orderWindow, setOrderWindow] = useState<OrderWindow | null>(null);
-  const [startAt, setStartAt] = useState("");
-  const [endAt, setEndAt] = useState("");
-  const [windowMsg, setWindowMsg] = useState("");
-  const [windowSaving, setWindowSaving] = useState(false);
+  const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [totalOrders, setTotalOrders] = useState(0);
   const [userName, setUserName] = useState("");
   const [orderDetails, setOrderDetails] = useState<OrderDetails>({
     orderDate: "", requesterName: "", phoneNumber: "",
-    customerSite: "שלישות רמת גן", deliveryAddress: "בן גוריון 100, רמת גן",
+    customerSite: "", deliveryAddress: "",
     matrixEmployeesCount: "", courierNotes: "נא להתקשר חצי שעה לפני הגעה",
   });
   const [detailsSaving, setDetailsSaving] = useState(false);
@@ -54,8 +49,9 @@ export default function AdminDashboard() {
       if (!d.user || d.user.role !== "admin") router.push("/login");
       setUserName(d.user?.fullName || d.user?.name || "מנהל");
     });
-    fetch("/api/order-window").then((r) => r.json()).then((d) => {
-      if (d.window) { setOrderWindow(d.window); setStartAt(toLocalInput(d.window.startDateTime)); setEndAt(toLocalInput(d.window.endDateTime)); }
+    fetch("/api/admin/sessions").then((r) => r.json()).then((d) => {
+      const sessions: Session[] = d.sessions || [];
+      setCurrentSession(sessions.find((s) => s.status === "open") || sessions[0] || null);
     });
     fetch("/api/admin/order-details").then((r) => r.json()).then((d) => {
       if (d.details) setOrderDetails((prev) => ({ ...prev, ...d.details }));
@@ -67,25 +63,6 @@ export default function AdminDashboard() {
       if (d.summary) setTotalOrders(d.summary.reduce((acc: number, r: { total: number }) => acc + r.total, 0));
     });
   }, [router]);
-
-  async function handleSaveWindow(e: React.FormEvent) {
-    e.preventDefault();
-    setWindowMsg("");
-    setWindowSaving(true);
-    const method = orderWindow ? "PATCH" : "POST";
-    const res = await fetch("/api/order-window", {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ start_at: new Date(startAt).toISOString(), end_at: new Date(endAt).toISOString() }),
-    });
-    const data = await res.json();
-    setWindowSaving(false);
-    if (!res.ok) { setWindowMsg("שגיאה: " + (data.error || "נסה שנית")); return; }
-    setWindowMsg("החלון עודכן בהצלחה");
-    setTimeout(() => setWindowMsg(""), 3000);
-    const fresh = await fetch("/api/order-window").then((r) => r.json());
-    if (fresh.window) setOrderWindow(fresh.window);
-  }
 
   async function handleSaveDetails(e: React.FormEvent) {
     e.preventDefault();
@@ -114,8 +91,14 @@ export default function AdminDashboard() {
     alert("קישור ההרשמה הועתק!");
   }
 
-  const now = new Date().toISOString();
-  const isOpen = orderWindow && now >= orderWindow.startDateTime && now <= orderWindow.endDateTime;
+  const now = Date.now();
+  const isOpen = !!currentSession &&
+    currentSession.status === "open" &&
+    now >= new Date(currentSession.startDateTime).getTime() &&
+    now <= new Date(currentSession.endDateTime).getTime();
+  const isPending = !!currentSession &&
+    currentSession.status === "open" &&
+    now < new Date(currentSession.startDateTime).getTime();
 
   return (
     <div className="min-h-screen" style={{ background: "#F9FBFD", paddingBottom: "90px" }}>
@@ -162,75 +145,58 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Window status banner */}
-        {orderWindow && (
+        {/* Current session status */}
+        {currentSession ? (
           <div
             className="rounded-[18px] p-4"
             style={{
-              background: isOpen ? "#F0FDF4" : "#FFF7ED",
-              border: `1px solid ${isOpen ? "#BBF7D0" : "#FED7AA"}`,
+              background: isOpen ? "#F0FDF4" : isPending ? "#FFFBEB" : "#FFF7ED",
+              border: `1px solid ${isOpen ? "#BBF7D0" : isPending ? "#FDE68A" : "#FED7AA"}`,
             }}
           >
-            <div className="flex items-center gap-2">
-              <span>{isOpen ? "✅" : "🔒"}</span>
-              <span className="font-semibold text-sm" style={{ color: isOpen ? "#15803D" : "#C2410C" }}>
-                {isOpen ? "חלון הגשה פתוח" : "חלון הגשה סגור"}
-              </span>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span>{isOpen ? "✅" : isPending ? "⏳" : "🔒"}</span>
+                  <span className="font-semibold text-sm" style={{ color: isOpen ? "#15803D" : isPending ? "#92400E" : "#C2410C" }}>
+                    {currentSession.name} {isPending ? "· ממתין לפתיחה" : ""}
+                  </span>
+                </div>
+                <p className="text-xs mt-1 mr-6" style={{ color: isOpen ? "#16A34A" : isPending ? "#A16207" : "#EA580C" }}>
+                  {formatDate(currentSession.startDateTime)} — {formatDate(currentSession.endDateTime)}
+                </p>
+              </div>
+              <Link
+                href="/admin/sessions"
+                className="text-xs font-semibold px-3 py-1.5 rounded-xl transition-colors"
+                style={{ background: isOpen ? "#DCFCE7" : "#FEF9C3", color: isOpen ? "#15803D" : "#92400E" }}
+              >
+                נהל
+              </Link>
             </div>
-            <p className="text-xs mt-1 mr-6" style={{ color: isOpen ? "#16A34A" : "#EA580C" }}>
-              {formatDate(orderWindow.startDateTime)} — {formatDate(orderWindow.endDateTime)}
-            </p>
           </div>
+        ) : (
+          <Link
+            href="/admin/sessions"
+            className="rounded-[18px] p-4 flex items-center justify-between"
+            style={{ background: "#FFFBEB", border: "1px solid #FDE68A", display: "flex" }}
+          >
+            <span className="text-sm font-medium" style={{ color: "#92400E" }}>אין סשן פעיל — לחץ לפתיחת סשן</span>
+            <span style={{ color: "#92400E" }}>←</span>
+          </Link>
         )}
 
-        {/* Session window form */}
-        <div
-          className="rounded-[18px] p-5"
-          style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}
-        >
-          <h2 className="text-base font-bold mb-4" style={{ color: "#1E293B" }}>
-            {orderWindow ? "עדכון חלון הגשה" : "פתיחת חלון הגשה"}
-          </h2>
-          <form onSubmit={handleSaveWindow} className="space-y-3">
-            <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "#64748B" }}>מתאריך ושעה</label>
-              <input
-                type="datetime-local"
-                value={startAt}
-                onChange={(e) => setStartAt(e.target.value)}
-                required
-                className="w-full border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                style={{ height: "48px", borderRadius: "12px", borderColor: "#DCE7F3", background: "#F8FAFC" }}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "#64748B" }}>עד תאריך ושעה</label>
-              <input
-                type="datetime-local"
-                value={endAt}
-                onChange={(e) => setEndAt(e.target.value)}
-                required
-                className="w-full border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                style={{ height: "48px", borderRadius: "12px", borderColor: "#DCE7F3", background: "#F8FAFC" }}
-              />
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                type="submit"
-                disabled={windowSaving}
-                className="text-white font-semibold text-sm px-5 transition-all"
-                style={{ height: "44px", borderRadius: "12px", background: windowSaving ? "#93C5FD" : "#3B82F6" }}
-              >
-                {windowSaving ? "שומר..." : orderWindow ? "עדכן" : "צור חלון"}
-              </button>
-              {windowMsg && (
-                <span className="text-sm font-medium" style={{ color: windowMsg.startsWith("שגיאה") ? "#EF4444" : "#22C55E" }}>
-                  {windowMsg}
-                </span>
-              )}
-            </div>
-          </form>
-        </div>
+        {/* Submit order (admin) */}
+        {isOpen && (
+          <Link
+            href="/order"
+            className="rounded-[18px] p-4 flex items-center justify-between"
+            style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", display: "flex" }}
+          >
+            <span className="text-sm font-semibold" style={{ color: "#1D4ED8" }}>הגש בקשה לסשן הנוכחי</span>
+            <span style={{ color: "#1D4ED8" }}>←</span>
+          </Link>
+        )}
 
         {/* Order details form */}
         <div

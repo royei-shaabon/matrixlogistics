@@ -1,13 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 body {
   background: #F9FBFD;
   color: #1E293B;
-  font-family: 'Heebo', Arial, sans-serif;
+  font-family: var(--font-heebo), Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 input, select, textarea, button {
-  font-family: 'Heebo', Arial, sans-serif;
+  font-family: var(--font-heebo), Arial, sans-serif;
 }

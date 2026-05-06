@@ -114,7 +114,7 @@ export default function OrderPage() {
   const totalItems = Object.values(entries).filter((v) => v.quantity && parseInt(v.quantity) > 0).length;
 
   return (
-    <div className="min-h-screen" style={{ background: "#F9FBFD", paddingBottom: "80px" }}>
+    <div className="min-h-screen" style={{ background: "#F9FBFD", paddingBottom: windowOpen && !saved ? "160px" : "80px" }}>
       {/* Header */}
       <div className="px-4 pt-6 pb-4 flex items-start justify-between">
         <div>
@@ -294,25 +294,30 @@ export default function OrderPage() {
                 {error}
               </div>
             )}
-
-            {/* Sticky submit */}
-            <div className="pt-2 pb-2">
-              <button
-                onClick={handleSubmit}
-                disabled={saving || totalItems === 0}
-                className="w-full text-white font-semibold text-sm transition-all"
-                style={{
-                  height: "54px",
-                  borderRadius: "14px",
-                  background: saving || totalItems === 0 ? "#93C5FD" : "#3B82F6",
-                }}
-              >
-                {saving ? "שולח..." : totalItems > 0 ? `הגש בקשה · ${totalItems} פריטים` : "הגש בקשה"}
-              </button>
-            </div>
           </>
         )}
       </div>
+
+      {/* Fixed submit button — always above BottomNav regardless of scroll position */}
+      {windowOpen && !saved && (
+        <div
+          className="fixed left-0 right-0 z-40 px-4"
+          style={{ bottom: "68px", paddingTop: "16px", paddingBottom: "8px", background: "linear-gradient(to bottom, transparent, #F9FBFD 35%)" }}
+        >
+          <button
+            onClick={handleSubmit}
+            disabled={saving || totalItems === 0}
+            className="w-full text-white font-semibold text-sm transition-all"
+            style={{
+              height: "54px",
+              borderRadius: "14px",
+              background: saving || totalItems === 0 ? "#93C5FD" : "#3B82F6",
+            }}
+          >
+            {saving ? "שולח..." : totalItems > 0 ? `הגש בקשה · ${totalItems} פריטים` : "הגש בקשה"}
+          </button>
+        </div>
+      )}
 
       <BottomNav isAdmin={isAdmin} />
     </div>

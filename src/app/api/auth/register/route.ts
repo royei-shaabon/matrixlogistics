@@ -4,9 +4,9 @@ import { createSession, setSessionCookie } from "@/lib/auth";
 import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req: NextRequest) {
-  const { token, name, branch, department } = await req.json();
+  const { token, name, branch, department, phone } = await req.json();
 
-  if (!token || !name || !branch || !department) {
+  if (!token || !name || !branch || !department || !phone) {
     return NextResponse.json({ error: "כל השדות נדרשים" }, { status: 400 });
   }
 
@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
     fullName: name,
     branch,
     department,
+    phoneNumber: phone,
     role: "user",
     status: "pending",
     createdAt: FieldValue.serverTimestamp(),

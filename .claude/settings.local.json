@@ -5,7 +5,14 @@
       "PowerShell($response = Invoke-WebRequest -Uri \"http://localhost:3000/api/auth/me\" -UseBasicParsing -ErrorAction SilentlyContinue; Write-Host \"Status: $\\($response.StatusCode\\)\"; Write-Host \"Content: $\\($response.Content\\)\")",
       "PowerShell($body = '{\"token\":\"test123\"}'; $response = Invoke-WebRequest -Uri \"http://localhost:3000/api/auth/login\" -Method POST -Body $body -ContentType \"application/json\" -UseBasicParsing -ErrorAction SilentlyContinue; Write-Host \"Status: $\\($response.StatusCode\\)\"; Write-Host \"Content: $\\($response.Content\\)\")",
       "PowerShell($body = '{\"token\":\"test123\"}'; try { $response = Invoke-WebRequest -Uri \"http://localhost:3000/api/auth/login\" -Method POST -Body $body -ContentType \"application/json\" -UseBasicParsing } catch { $response = $_.Exception.Response; $reader = New-Object System.IO.StreamReader\\($response.GetResponseStream\\(\\)\\); $content = $reader.ReadToEnd\\(\\); Write-Host \"Status: $\\($response.StatusCode\\)\"; Write-Host \"Content: $content\" })",
-      "PowerShell(try { $response = Invoke-WebRequest -Uri \"http://localhost:3000/api/users\" -UseBasicParsing } catch { $response = $_.Exception.Response; $reader = New-Object System.IO.StreamReader\\($response.GetResponseStream\\(\\)\\); $content = $reader.ReadToEnd\\(\\); Write-Host \"Status: $\\($response.StatusCode\\)\"; Write-Host \"Content: $content\" })"
+      "PowerShell(try { $response = Invoke-WebRequest -Uri \"http://localhost:3000/api/users\" -UseBasicParsing } catch { $response = $_.Exception.Response; $reader = New-Object System.IO.StreamReader\\($response.GetResponseStream\\(\\)\\); $content = $reader.ReadToEnd\\(\\); Write-Host \"Status: $\\($response.StatusCode\\)\"; Write-Host \"Content: $content\" })",
+      "Bash(Remove-Item -Recurse -Force \"c:\\\\Users\\\\shaab\\\\Desktop\\\\matrix-supply-order\\\\.next\" -ErrorAction SilentlyContinue)",
+      "Bash(Write-Host \"Cache cleared\")",
+      "Bash(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\shaab\\\\Desktop\\\\matrix-supply-order\\\\src\\\\app\\\\api\\\\admin\\\\sessions\")",
+      "Bash(Out-Null)",
+      "Bash(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\shaab\\\\Desktop\\\\matrix-supply-order\\\\src\\\\app\\\\api\\\\admin\\\\sessions\\\\[id]\")",
+      "Bash(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\shaab\\\\Desktop\\\\matrix-supply-order\\\\src\\\\app\\\\admin\\\\sessions\")",
+      "Bash(Write-Host \"done\")"
     ]
   }
 }
