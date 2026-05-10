@@ -506,7 +506,7 @@ function SummaryPageInner() {
         <div ref={pdfRef} style={{ fontFamily: "Arial, sans-serif", direction: "rtl", padding: "20px", background: "white" }}>
           <div style={{ marginBottom: "20px", borderBottom: "2px solid #1d4ed8", paddingBottom: "12px" }}>
             <h1 style={{ fontSize: "18px", fontWeight: "bold", color: "#1e3a5f", margin: "0 0 4px 0" }}>
-              סל מוצרי מזון לאספקה לעובדי מטריקס באתרים
+              סל מוצרי מזון לאספקה לעובדי Get Supply באתרים
             </h1>
             {selectedSession && (
               <p style={{ fontSize: "13px", color: "#3B82F6", margin: "0 0 10px 0" }}>

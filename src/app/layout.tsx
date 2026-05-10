@@ -10,9 +10,13 @@ const heebo = Heebo({
 });
 
 export const metadata: Metadata = {
-  title: "הזמנת אספקה - מטריקס",
-  description: "מערכת הגשת בקשות לוגיסטיות לעובדי מטריקס",
+  title: "הזמנת אספקה - Get Supply",
+  description: "מערכת הגשת בקשות לוגיסטיות Get Supply",
   viewport: "width=device-width, initial-scale=1, viewport-fit=cover",
+  icons: {
+    icon: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -91,7 +91,7 @@ export default function LoginPage() {
               <line x1="9" y1="16" x2="13" y2="16" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold" style={{ color: "#1E293B" }}>מטריקס</h1>
+          <h1 className="text-2xl font-bold" style={{ color: "#1E293B" }}>Get Supply</h1>
           <p className="text-sm mt-1" style={{ color: "#64748B" }}>מערכת הגשת בקשות לוגיסטיות</p>
         </div>
 

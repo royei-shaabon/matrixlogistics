@@ -5,7 +5,7 @@
 PROJECT_ID="matrix-logistic-6355c"
 REGION="me-west1"
 IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/matrix-supply/app:prod"
-SERVICE="matrix-supply-prod"
+SERVICE="get-supply-prod"
 
 echo "=== Building PROD image ==="
 docker build -t $IMAGE .
