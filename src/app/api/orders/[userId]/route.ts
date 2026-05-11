@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, isEnvAdmin } from "@/lib/auth";
 import { getAdminDb, COLLECTIONS } from "@/lib/firebase-admin";
 
 export async function DELETE(
@@ -7,7 +7,7 @@ export async function DELETE(
   { params }: { params: Promise<{ userId: string }> }
 ) {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || !isEnvAdmin(session)) {
     return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
   }
 

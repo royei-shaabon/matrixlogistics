@@ -1,73 +1,75 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, isEnvAdmin } from "@/lib/auth";
 import { getAdminDb, COLLECTIONS } from "@/lib/firebase-admin";
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || !isEnvAdmin(session) || !session.currentEnvironmentId) {
     return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
   }
 
+  const envId = session.currentEnvironmentId;
   const db = getAdminDb();
-  const explicitWindowId = new URL(req.url).searchParams.get("windowId");
+  const sectionId = new URL(req.url).searchParams.get("sectionId");
 
-  let windowId: string;
-  let windowMeta: Record<string, unknown> = {};
-
-  if (explicitWindowId) {
-    windowId = explicitWindowId;
+  let resolvedSectionId: string;
+  if (sectionId) {
+    resolvedSectionId = sectionId;
   } else {
-    const windowDoc = await db.collection(COLLECTIONS.orderWindow).doc("current").get();
-    if (!windowDoc.exists) return NextResponse.json({ summary: [], window: null });
-    const data = windowDoc.data()!;
-    windowId = data.windowId;
-    windowMeta = { ...data, updatedAt: data.updatedAt?.toDate().toISOString() };
+    const activeSnap = await db
+      .collection(COLLECTIONS.sections)
+      .where("environmentId", "==", envId)
+      .where("status", "==", "active")
+      .limit(1)
+      .get();
+    if (activeSnap.empty) return NextResponse.json({ summary: [], section: null });
+    resolvedSectionId = activeSnap.docs[0].id;
   }
 
   const ordersSnap = await db
     .collection(COLLECTIONS.orders)
-    .where("windowId", "==", windowId)
+    .where("sectionId", "==", resolvedSectionId)
+    .where("environmentId", "==", envId)
     .get();
 
-  if (ordersSnap.empty) return NextResponse.json({ summary: [], window: windowMeta });
+  if (ordersSnap.empty) return NextResponse.json({ summary: [], section: { id: resolvedSectionId } });
 
   const orderIds = ordersSnap.docs.map((d) => d.id);
+  const allItems: { itemId: string; itemName: string; quantity: number; note: string; status: string }[] = [];
 
-  const allItems: { itemId: number; itemName: string; quantity: number; orderNote: string; status?: string }[] = [];
   for (let i = 0; i < orderIds.length; i += 30) {
     const chunk = orderIds.slice(i, i + 30);
-    const itemsSnap = await db
-      .collection(COLLECTIONS.orderItems)
-      .where("orderId", "in", chunk)
-      .get();
-    itemsSnap.docs.forEach((d) => allItems.push(d.data() as typeof allItems[0]));
+    const itemsSnap = await db.collection(COLLECTIONS.orderItems).where("orderId", "in", chunk).get();
+    itemsSnap.docs.forEach((d) => {
+      const data = d.data();
+      allItems.push({
+        itemId: data.itemId,
+        itemName: data.itemNameSnapshot,
+        quantity: data.quantity,
+        note: data.note || "",
+        status: data.status || "active",
+      });
+    });
   }
 
-  const activeItems = allItems.filter((item) => item.status !== "blocked");
-
-  const map = new Map<number, { itemName: string; total: number; notes: string[] }>();
-  for (const item of activeItems) {
-    const existing = map.get(item.itemId);
-    if (existing) {
-      existing.total += item.quantity;
-      if (item.orderNote) existing.notes.push(item.orderNote);
+  const active = allItems.filter((i) => i.status !== "blocked");
+  const map = new Map<string, { itemName: string; total: number; notes: string[] }>();
+  for (const item of active) {
+    const ex = map.get(item.itemId);
+    if (ex) {
+      ex.total += item.quantity;
+      if (item.note) ex.notes.push(item.note);
     } else {
-      map.set(item.itemId, {
-        itemName: item.itemName,
-        total: item.quantity,
-        notes: item.orderNote ? [item.orderNote] : [],
-      });
+      map.set(item.itemId, { itemName: item.itemName, total: item.quantity, notes: item.note ? [item.note] : [] });
     }
   }
 
-  const summary = Array.from(map.entries())
-    .map(([itemId, v]) => ({
-      itemId,
-      itemName: v.itemName,
-      total: v.total,
-      notes: [...new Set(v.notes)].join("; "),
-    }))
-    .sort((a, b) => a.itemId - b.itemId);
+  const summary = Array.from(map.entries()).map(([itemId, v]) => ({
+    itemId,
+    itemName: v.itemName,
+    total: v.total,
+    notes: [...new Set(v.notes)].join("; "),
+  }));
 
-  return NextResponse.json({ summary, window: windowMeta });
+  return NextResponse.json({ summary, section: { id: resolvedSectionId } });
 }

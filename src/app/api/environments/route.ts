@@ -1,0 +1,95 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/lib/auth";
+import { getAdminDb, COLLECTIONS } from "@/lib/firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
+import { randomUUID } from "crypto";
+
+// GET /api/environments — list environments the user belongs to
+export async function GET() {
+  const session = await getSession();
+  if (!session || session.globalStatus === "blocked") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const db = getAdminDb();
+
+  if (session.globalRole === "super_admin") {
+    const snap = await db.collection(COLLECTIONS.environments).get();
+    const environments = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+        const at = (a.createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0;
+        const bt = (b.createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0;
+        return bt - at;
+      });
+    return NextResponse.json({ environments });
+  }
+
+  const memberships = await db
+    .collection(COLLECTIONS.environmentMembers)
+    .where("userId", "==", session.userId)
+    .get();
+
+  if (memberships.empty) return NextResponse.json({ environments: [] });
+
+  const envIds = memberships.docs.map((d) => d.data().environmentId as string);
+  const envDocs = await Promise.all(
+    envIds.map((id) => db.collection(COLLECTIONS.environments).doc(id).get())
+  );
+
+  const memberMap: Record<string, { role: string; status: string; memberId: string }> = {};
+  memberships.docs.forEach((d) => {
+    const data = d.data();
+    memberMap[data.environmentId] = { role: data.role, status: data.status, memberId: d.id };
+  });
+
+  return NextResponse.json({
+    environments: envDocs
+      .filter((d) => d.exists)
+      .map((d) => ({
+        id: d.id,
+        ...d.data(),
+        memberRole: memberMap[d.id]?.role,
+        memberStatus: memberMap[d.id]?.status,
+        memberId: memberMap[d.id]?.memberId,
+      })),
+  });
+}
+
+// POST /api/environments — create new environment
+export async function POST(req: NextRequest) {
+  const session = await getSession();
+  if (!session || session.globalStatus === "blocked") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { name, description } = await req.json();
+  if (!name?.trim()) return NextResponse.json({ error: "שם סביבה נדרש" }, { status: 400 });
+
+  const db = getAdminDb();
+  const inviteCode = randomUUID();
+  const now = FieldValue.serverTimestamp();
+
+  const isSuperAdmin = session.globalRole === "super_admin";
+  const envRef = await db.collection(COLLECTIONS.environments).add({
+    name: name.trim(),
+    description: description?.trim() || "",
+    ownerUserId: session.userId,
+    status: isSuperAdmin ? "active" : "pending",
+    inviteCode,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  // Add creator as environment_admin
+  await db.collection(COLLECTIONS.environmentMembers).add({
+    environmentId: envRef.id,
+    userId: session.userId,
+    role: "environment_admin",
+    status: "approved",
+    joinedAt: now,
+    updatedAt: now,
+  });
+
+  return NextResponse.json({ id: envRef.id, inviteCode }, { status: 201 });
+}

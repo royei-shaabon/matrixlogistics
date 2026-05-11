@@ -4,9 +4,9 @@ import { createSession, setSessionCookie } from "@/lib/auth";
 import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req: NextRequest) {
-  const { token, name, branch, department, phone } = await req.json();
+  const { token, name, phone } = await req.json();
 
-  if (!token || !name || !branch || !department || !phone) {
+  if (!token || !name || !phone) {
     return NextResponse.json({ error: "כל השדות נדרשים" }, { status: 400 });
   }
 
@@ -23,29 +23,25 @@ export async function POST(req: NextRequest) {
   const uid = decoded.uid;
   const email = decoded.email || "";
 
-  // Check if user doc already exists
   const existing = await db.collection(COLLECTIONS.users).doc(uid).get();
   if (existing.exists) {
     const data = existing.data()!;
     const sessionToken = await createSession({
       userId: uid,
       email,
-      role: data.role,
-      status: data.status,
+      globalRole: data.globalRole || "user",
+      globalStatus: data.globalStatus || "active",
     });
-    const res = NextResponse.json({ ok: true, status: data.status, role: data.role });
+    const res = NextResponse.json({ ok: true, globalRole: data.globalRole || "user" });
     return setSessionCookie(res, sessionToken);
   }
 
-  // Create new user doc
   await db.collection(COLLECTIONS.users).doc(uid).set({
     email,
-    fullName: name,
-    branch,
-    department,
-    phoneNumber: phone,
-    role: "user",
-    status: "pending",
+    fullName: name.trim(),
+    phoneNumber: phone.trim(),
+    globalRole: "user",
+    globalStatus: "active",
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });
@@ -53,10 +49,10 @@ export async function POST(req: NextRequest) {
   const sessionToken = await createSession({
     userId: uid,
     email,
-    role: "user",
-    status: "pending",
+    globalRole: "user",
+    globalStatus: "active",
   });
 
-  const res = NextResponse.json({ ok: true, status: "pending" });
+  const res = NextResponse.json({ ok: true, globalRole: "user" });
   return setSessionCookie(res, sessionToken);
 }

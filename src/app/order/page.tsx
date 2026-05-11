@@ -2,17 +2,22 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { PRODUCTS, CATEGORIES } from "@/lib/products";
 import BottomNav from "@/components/BottomNav";
 
-interface OrderWindow {
-  windowId: string;
+interface Section {
+  sectionId: string;
   startDateTime: string;
   endDateTime: string;
 }
 
+interface Item {
+  id: string;
+  name: string;
+  category?: string;
+}
+
 interface OrderEntry {
-  [productId: number]: { quantity: string; notes: string };
+  [itemId: string]: { quantity: string; notes: string };
 }
 
 function formatDate(iso: string) {
@@ -24,7 +29,8 @@ function formatDate(iso: string) {
 
 export default function OrderPage() {
   const router = useRouter();
-  const [orderWindow, setOrderWindow] = useState<OrderWindow | null>(null);
+  const [section, setSection] = useState<Section | null>(null);
+  const [items, setItems] = useState<Item[]>([]);
   const [entries, setEntries] = useState<OrderEntry>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -32,23 +38,29 @@ export default function OrderPage() {
   const [userName, setUserName] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [windowOpen, setWindowOpen] = useState(false);
+  const [envId, setEnvId] = useState("");
 
-  const checkWindowOpen = useCallback((w: OrderWindow) => {
+  const checkWindowOpen = useCallback((s: Section) => {
     const now = new Date().toISOString();
-    setWindowOpen(now >= w.startDateTime && now <= w.endDateTime);
+    setWindowOpen(now >= s.startDateTime && now <= s.endDateTime);
   }, []);
 
   useEffect(() => {
     fetch("/api/auth/me").then((r) => r.json()).then((d) => {
       if (!d.user) { router.push("/login"); return; }
-      if (d.user.status === "pending" && d.user.role !== "admin") { router.push("/pending"); return; }
+      if (d.user.environmentStatus === "pending") { router.push("/pending"); return; }
+      if (!d.user.currentEnvironmentId) { router.push("/environments"); return; }
       setUserName(d.user.fullName || d.user.name || "");
-      setIsAdmin(d.user.role === "admin");
-    });
-    fetch("/api/order-window").then((r) => r.json()).then((d) => {
-      if (d.window) { setOrderWindow(d.window); checkWindowOpen(d.window); }
+      const isEnvAdmin = d.user.globalRole === "super_admin" || d.user.environmentRole === "environment_admin";
+      setIsAdmin(isEnvAdmin);
+      const eid = d.user.currentEnvironmentId;
+      setEnvId(eid);
+      fetch(`/api/environments/${eid}/items`).then((r) => r.json()).then((itemData) => {
+        setItems((itemData.items || []).filter((i: Item & { status?: string }) => i.status !== "inactive"));
+      });
     });
     fetch("/api/orders").then((r) => r.json()).then((d) => {
+      if (d.section) { setSection(d.section); checkWindowOpen(d.section); }
       if (d.items) {
         const map: OrderEntry = {};
         for (const item of d.items) {
@@ -60,42 +72,36 @@ export default function OrderPage() {
   }, [router, checkWindowOpen]);
 
   useEffect(() => {
-    if (!orderWindow) return;
-    const t = setInterval(() => checkWindowOpen(orderWindow), 60000);
+    if (!section) return;
+    const t = setInterval(() => checkWindowOpen(section), 60000);
     return () => clearInterval(t);
-  }, [orderWindow, checkWindowOpen]);
+  }, [section, checkWindowOpen]);
 
-  function setQty(productId: number, delta: number) {
+  function setQty(itemId: string, delta: number) {
     setEntries((prev) => {
-      const current = parseInt(prev[productId]?.quantity || "0");
+      const current = parseInt(prev[itemId]?.quantity || "0");
       const next = Math.max(0, current + delta);
-      return {
-        ...prev,
-        [productId]: { quantity: next === 0 ? "" : String(next), notes: prev[productId]?.notes || "" },
-      };
+      return { ...prev, [itemId]: { quantity: next === 0 ? "" : String(next), notes: prev[itemId]?.notes || "" } };
     });
     setSaved(false);
   }
 
-  function setNotes(productId: number, value: string) {
-    setEntries((prev) => ({
-      ...prev,
-      [productId]: { quantity: prev[productId]?.quantity || "", notes: value },
-    }));
+  function setNotes(itemId: string, value: string) {
+    setEntries((prev) => ({ ...prev, [itemId]: { quantity: prev[itemId]?.quantity || "", notes: value } }));
     setSaved(false);
   }
 
   async function handleSubmit() {
     setError("");
     setSaving(true);
-    const items = Object.entries(entries)
+    const orderItems = Object.entries(entries)
       .filter(([, v]) => v.quantity && parseInt(v.quantity) > 0)
-      .map(([id, v]) => ({ product_id: parseInt(id), quantity: parseInt(v.quantity), notes: v.notes || undefined }));
+      .map(([id, v]) => ({ itemId: id, quantity: parseInt(v.quantity), notes: v.notes || undefined }));
 
     const res = await fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items }),
+      body: JSON.stringify({ items: orderItems }),
     });
     const data = await res.json();
     setSaving(false);
@@ -111,28 +117,36 @@ export default function OrderPage() {
     router.push("/login");
   }
 
+  const categories = [...new Set(items.map((i) => i.category || "כללי"))];
   const totalItems = Object.values(entries).filter((v) => v.quantity && parseInt(v.quantity) > 0).length;
 
   return (
     <div className="min-h-screen" style={{ background: "#F9FBFD", paddingBottom: windowOpen && !saved ? "160px" : "80px" }}>
-      {/* Header */}
       <div className="px-4 pt-6 pb-4 flex items-start justify-between">
         <div>
           <p className="text-sm font-medium" style={{ color: "#64748B" }}>שלום,</p>
           <h1 className="text-xl font-bold" style={{ color: "#1E293B" }}>{userName || "..."}</h1>
         </div>
-        <button
-          onClick={handleLogout}
-          className="mt-1 text-xs font-medium px-3 py-1.5 rounded-xl border transition-colors"
-          style={{ color: "#64748B", borderColor: "#DCE7F3", background: "#FFFFFF" }}
-        >
-          יציאה
-        </button>
+        <div className="flex items-center gap-2 mt-1">
+          <button
+            onClick={() => router.push("/environments")}
+            className="text-xs font-medium px-3 py-1.5 rounded-xl border transition-colors"
+            style={{ color: "#3B82F6", borderColor: "#BFDBFE", background: "#EFF6FF" }}
+          >
+            ⇄ סביבה
+          </button>
+          <button
+            onClick={handleLogout}
+            className="text-xs font-medium px-3 py-1.5 rounded-xl border transition-colors"
+            style={{ color: "#64748B", borderColor: "#DCE7F3", background: "#FFFFFF" }}
+          >
+            יציאה
+          </button>
+        </div>
       </div>
 
       <div className="px-4 space-y-3">
-        {/* Window status */}
-        {orderWindow ? (
+        {section ? (
           <div
             className="rounded-[18px] p-4"
             style={{
@@ -147,28 +161,18 @@ export default function OrderPage() {
               </span>
             </div>
             <p className="text-xs mr-6" style={{ color: windowOpen ? "#16A34A" : "#EA580C" }}>
-              {formatDate(orderWindow.startDateTime)} — {formatDate(orderWindow.endDateTime)}
+              {formatDate(section.startDateTime)} — {formatDate(section.endDateTime)}
             </p>
           </div>
         ) : (
-          <div
-            className="rounded-[18px] p-4 text-sm"
-            style={{ background: "#FFFBEB", border: "1px solid #FDE68A", color: "#92400E" }}
-          >
+          <div className="rounded-[18px] p-4 text-sm" style={{ background: "#FFFBEB", border: "1px solid #FDE68A", color: "#92400E" }}>
             לא הוגדר חלון הגשה על ידי המנהל עדיין.
           </div>
         )}
 
-        {/* Success state */}
         {windowOpen && saved && (
-          <div
-            className="rounded-[18px] p-8 text-center"
-            style={{ background: "#FFFFFF", border: "1px solid #BBF7D0", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}
-          >
-            <div
-              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 mx-auto"
-              style={{ background: "#F0FDF4" }}
-            >
+          <div className="rounded-[18px] p-8 text-center" style={{ background: "#FFFFFF", border: "1px solid #BBF7D0", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}>
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 mx-auto" style={{ background: "#F0FDF4" }}>
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
@@ -176,9 +180,7 @@ export default function OrderPage() {
             <h2 className="text-lg font-bold mb-1" style={{ color: "#15803D" }}>בקשתך הוגשה בהצלחה</h2>
             <p className="text-sm mb-6" style={{ color: "#64748B" }}>
               תוכל לערוך אותה עד{" "}
-              <span className="font-semibold" style={{ color: "#1E293B" }}>
-                {formatDate(orderWindow!.endDateTime)}
-              </span>
+              <span className="font-semibold" style={{ color: "#1E293B" }}>{formatDate(section!.endDateTime)}</span>
             </p>
             <button
               onClick={() => setSaved(false)}
@@ -190,88 +192,34 @@ export default function OrderPage() {
           </div>
         )}
 
-        {/* Product list */}
-        {windowOpen && !saved && (
+        {windowOpen && !saved && items.length > 0 && (
           <>
-            {CATEGORIES.map((cat) => {
-              const products = PRODUCTS.filter((p) => p.category === cat);
+            {categories.map((cat) => {
+              const catItems = items.filter((i) => (i.category || "כללי") === cat);
               return (
                 <div key={cat}>
-                  <h2 className="text-xs font-bold uppercase tracking-wider mb-2 px-1" style={{ color: "#94A3B8" }}>
-                    {cat}
-                  </h2>
-                  <div
-                    className="rounded-[18px] overflow-hidden"
-                    style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}
-                  >
-                    {products.map((product, idx) => {
-                      const entry = entries[product.id];
+                  <h2 className="text-xs font-bold uppercase tracking-wider mb-2 px-1" style={{ color: "#94A3B8" }}>{cat}</h2>
+                  <div className="rounded-[18px] overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}>
+                    {catItems.map((item, idx) => {
+                      const entry = entries[item.id];
                       const qty = parseInt(entry?.quantity || "0");
                       const hasValue = qty > 0;
-
                       return (
-                        <div
-                          key={product.id}
-                          className="px-4 py-3"
-                          style={{
-                            borderTop: idx > 0 ? "1px solid #F1F5F9" : undefined,
-                            background: hasValue ? "#EFF6FF" : undefined,
-                          }}
-                        >
-                          {/* Product name */}
+                        <div key={item.id} className="px-4 py-3" style={{ borderTop: idx > 0 ? "1px solid #F1F5F9" : undefined, background: hasValue ? "#EFF6FF" : undefined }}>
                           <div className="flex items-center justify-between mb-2.5">
-                            <span
-                              className="text-sm font-medium leading-snug flex-1 ml-3"
-                              style={{ color: hasValue ? "#1D4ED8" : "#1E293B" }}
-                            >
-                              {product.name}
-                            </span>
-                            {hasValue && (
-                              <span
-                                className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
-                                style={{ background: "#DBEAFE", color: "#1D4ED8" }}
-                              >
-                                {qty}
-                              </span>
-                            )}
+                            <span className="text-sm font-medium leading-snug flex-1 ml-3" style={{ color: hasValue ? "#1D4ED8" : "#1E293B" }}>{item.name}</span>
+                            {hasValue && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: "#DBEAFE", color: "#1D4ED8" }}>{qty}</span>}
                           </div>
-
-                          {/* Stepper + notes */}
                           <div className="flex items-center gap-3">
-                            {/* Stepper */}
-                            <div
-                              className="flex items-center rounded-xl overflow-hidden flex-shrink-0"
-                              style={{ border: "1px solid #DCE7F3", background: "#F8FAFC" }}
-                            >
-                              <button
-                                type="button"
-                                onClick={() => setQty(product.id, -1)}
-                                className="flex items-center justify-center text-lg font-light transition-colors"
-                                style={{ width: "40px", height: "40px", color: qty === 0 ? "#CBD5E1" : "#64748B" }}
-                              >
-                                −
-                              </button>
-                              <span
-                                className="text-sm font-bold text-center"
-                                style={{ width: "36px", color: hasValue ? "#1D4ED8" : "#94A3B8" }}
-                              >
-                                {qty === 0 ? "0" : qty}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => setQty(product.id, 1)}
-                                className="flex items-center justify-center text-lg transition-colors"
-                                style={{ width: "40px", height: "40px", color: "#3B82F6" }}
-                              >
-                                +
-                              </button>
+                            <div className="flex items-center rounded-xl overflow-hidden flex-shrink-0" style={{ border: "1px solid #DCE7F3", background: "#F8FAFC" }}>
+                              <button type="button" onClick={() => setQty(item.id, -1)} className="flex items-center justify-center text-lg font-light transition-colors" style={{ width: "40px", height: "40px", color: qty === 0 ? "#CBD5E1" : "#64748B" }}>−</button>
+                              <span className="text-sm font-bold text-center" style={{ width: "36px", color: hasValue ? "#1D4ED8" : "#94A3B8" }}>{qty === 0 ? "0" : qty}</span>
+                              <button type="button" onClick={() => setQty(item.id, 1)} className="flex items-center justify-center text-lg transition-colors" style={{ width: "40px", height: "40px", color: "#3B82F6" }}>+</button>
                             </div>
-
-                            {/* Notes */}
                             <input
                               type="text"
                               value={entry?.notes || ""}
-                              onChange={(e) => setNotes(product.id, e.target.value)}
+                              onChange={(e) => setNotes(item.id, e.target.value)}
                               placeholder="הערה..."
                               className="flex-1 text-sm px-3 focus:outline-none focus:ring-1 focus:ring-blue-300 transition-shadow"
                               style={{ height: "40px", borderRadius: "10px", border: "1px solid #DCE7F3", background: "#F8FAFC" }}
@@ -285,34 +233,26 @@ export default function OrderPage() {
               );
             })}
 
-            {/* Error */}
-            {error && (
-              <div
-                className="rounded-xl px-4 py-3 text-sm font-medium"
-                style={{ background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA" }}
-              >
-                {error}
+            {items.length === 0 && (
+              <div className="rounded-[18px] p-8 text-center text-sm" style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", color: "#94A3B8" }}>
+                לא הוגדרו פריטים לסביבה זו
               </div>
+            )}
+
+            {error && (
+              <div className="rounded-xl px-4 py-3 text-sm font-medium" style={{ background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA" }}>{error}</div>
             )}
           </>
         )}
       </div>
 
-      {/* Fixed submit button — always above BottomNav regardless of scroll position */}
       {windowOpen && !saved && (
-        <div
-          className="fixed left-0 right-0 z-40 px-4"
-          style={{ bottom: "68px", paddingTop: "16px", paddingBottom: "8px", background: "linear-gradient(to bottom, transparent, #F9FBFD 35%)" }}
-        >
+        <div className="fixed left-0 right-0 z-40 px-4" style={{ bottom: "68px", paddingTop: "16px", paddingBottom: "8px", background: "linear-gradient(to bottom, transparent, #F9FBFD 35%)" }}>
           <button
             onClick={handleSubmit}
             disabled={saving || totalItems === 0}
             className="w-full text-white font-semibold text-sm transition-all"
-            style={{
-              height: "54px",
-              borderRadius: "14px",
-              background: saving || totalItems === 0 ? "#93C5FD" : "#3B82F6",
-            }}
+            style={{ height: "54px", borderRadius: "14px", background: saving || totalItems === 0 ? "#93C5FD" : "#3B82F6" }}
           >
             {saving ? "שולח..." : totalItems > 0 ? `הגש בקשה · ${totalItems} פריטים` : "הגש בקשה"}
           </button>

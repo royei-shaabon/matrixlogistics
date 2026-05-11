@@ -21,32 +21,39 @@ export async function POST(req: NextRequest) {
 
   const doc = await db.collection(COLLECTIONS.users).doc(uid).get();
 
-  // If no doc for this Google UID, check if the same email registered with email/password
   if (!doc.exists) {
+    // Check by email
     const byEmail = await db.collection(COLLECTIONS.users).where("email", "==", email).limit(1).get();
     if (!byEmail.empty) {
       const existing = byEmail.docs[0];
       const data = existing.data();
+      if (data.globalStatus === "blocked") {
+        return NextResponse.json({ error: "חשבונך חסום" }, { status: 403 });
+      }
       const sessionToken = await createSession({
         userId: existing.id,
         email,
-        role: data.role,
-        status: data.status,
+        globalRole: data.globalRole || "user",
+        globalStatus: data.globalStatus || "active",
       });
-      const res = NextResponse.json({ ok: true, status: data.status, role: data.role });
+      const res = NextResponse.json({ ok: true, globalRole: data.globalRole || "user" });
       return setSessionCookie(res, sessionToken);
     }
     return NextResponse.json({ needsRegistration: true });
   }
 
   const data = doc.data()!;
+  if (data.globalStatus === "blocked") {
+    return NextResponse.json({ error: "חשבונך חסום" }, { status: 403 });
+  }
+
   const sessionToken = await createSession({
     userId: uid,
     email,
-    role: data.role,
-    status: data.status,
+    globalRole: data.globalRole || "user",
+    globalStatus: data.globalStatus || "active",
   });
 
-  const res = NextResponse.json({ ok: true, status: data.status, role: data.role });
+  const res = NextResponse.json({ ok: true, globalRole: data.globalRole || "user" });
   return setSessionCookie(res, sessionToken);
 }

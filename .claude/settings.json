@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -w \"\\\\nHTTP:%{http_code}\" -X POST http://localhost:3000/api/auth/register -H \"Content-Type: application/json\" -d '{\"token\":\"fake\",\"name\":\"test\",\"phone\":\"0501234567\"}')",
+      "Bash(del \"c:\\\\Users\\\\shaab\\\\Desktop\\\\matrix-supply-order\\\\src\\\\app\\\\favicon.ico\")"
+    ]
+  }
+}

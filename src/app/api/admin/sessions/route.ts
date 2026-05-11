@@ -1,40 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, isEnvAdmin } from "@/lib/auth";
 import { getAdminDb, COLLECTIONS } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
-import { randomUUID } from "crypto";
 
 export async function GET() {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || !isEnvAdmin(session) || !session.currentEnvironmentId) {
     return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
   }
 
   const db = getAdminDb();
   const snap = await db
-    .collection(COLLECTIONS.sessions)
-    .orderBy("createdAt", "desc")
+    .collection(COLLECTIONS.sections)
+    .where("environmentId", "==", session.currentEnvironmentId)
     .get();
 
-  const sessions = snap.docs.map((d) => {
-    const data = d.data();
-    return {
-      id: d.id,
-      name: data.name,
-      windowId: data.windowId,
-      status: data.status,
-      startDateTime: data.startDateTime,
-      endDateTime: data.endDateTime,
-      createdAt: data.createdAt?.toDate().toISOString() || null,
-    };
-  });
+  const sessions = snap.docs
+    .map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        name: data.name,
+        // normalize: Firestore stores "active", frontend expects "open"
+        status: data.status === "active" ? "open" : data.status,
+        startDateTime: data.startDateTime,
+        endDateTime: data.endDateTime,
+        createdAt: data.createdAt?.toDate().toISOString() || null,
+      };
+    })
+    .sort((a, b) => {
+      if (!a.createdAt && !b.createdAt) return 0;
+      if (!a.createdAt) return 1;
+      if (!b.createdAt) return -1;
+      return b.createdAt.localeCompare(a.createdAt);
+    });
 
   return NextResponse.json({ sessions });
 }
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || !isEnvAdmin(session) || !session.currentEnvironmentId) {
     return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
   }
 
@@ -46,39 +52,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "זמן סיום חייב להיות אחרי זמן התחלה" }, { status: 400 });
   }
 
+  const envId = session.currentEnvironmentId;
   const db = getAdminDb();
-  const windowId = randomUUID();
 
-  // Close any currently open sessions
-  const openSessions = await db
-    .collection(COLLECTIONS.sessions)
-    .where("status", "==", "open")
+  // Close any open sections in this environment
+  const openSnap = await db
+    .collection(COLLECTIONS.sections)
+    .where("environmentId", "==", envId)
+    .where("status", "==", "active")
     .get();
-  const batch = db.batch();
-  openSessions.docs.forEach((d) => batch.update(d.ref, { status: "closed" }));
 
-  // Create the new session
-  const newRef = db.collection(COLLECTIONS.sessions).doc();
+  const batch = db.batch();
+  openSnap.docs.forEach((d) => batch.update(d.ref, { status: "closed", updatedAt: FieldValue.serverTimestamp() }));
+
+  const newRef = db.collection(COLLECTIONS.sections).doc();
   batch.set(newRef, {
+    environmentId: envId,
     name: name.trim(),
-    windowId,
-    status: "open",
+    status: "active",
     startDateTime,
     endDateTime,
     createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
     createdBy: session.userId,
   });
 
   await batch.commit();
-
-  // Update orderWindow/current so users can submit orders
-  await db.collection(COLLECTIONS.orderWindow).doc("current").set({
-    windowId,
-    startDateTime,
-    endDateTime,
-    updatedAt: FieldValue.serverTimestamp(),
-    updatedBy: session.userId,
-  });
-
-  return NextResponse.json({ ok: true, sessionId: newRef.id, windowId });
+  return NextResponse.json({ ok: true, sessionId: newRef.id });
 }

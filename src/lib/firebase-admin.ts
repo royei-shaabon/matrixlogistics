@@ -16,7 +16,6 @@ function getAdminApp(): App {
       }),
     });
   } else {
-    // Application Default Credentials — used in Cloud Run
     _app = initializeApp({
       projectId: process.env.FIREBASE_ADMIN_PROJECT_ID || "matrix-logistic-6355c",
     });
@@ -33,62 +32,96 @@ export function getAdminDb(): Firestore {
   return getFirestore(getAdminApp());
 }
 
-// Firestore collection names
 export const COLLECTIONS = {
   users: "users",
-  orderWindow: "orderWindow",
-  generalOrderDetails: "generalOrderDetails",
+  environments: "environments",
+  environmentMembers: "environmentMembers",
+  items: "items",
   orders: "orders",
   orderItems: "orderItems",
+  sections: "sections",
+  // Legacy (kept for migration)
+  orderWindow: "orderWindow",
   sessions: "sessions",
+  generalOrderDetails: "generalOrderDetails",
 } as const;
 
 export type UserDoc = {
   email: string;
   fullName: string;
-  branch: string;
-  department: string;
-  role: "admin" | "user";
-  status: "pending" | "approved";
+  phoneNumber: string;
+  globalRole: "user" | "super_admin";
+  globalStatus: "active" | "blocked";
+  createdAt: FirebaseFirestore.Timestamp;
+  updatedAt: FirebaseFirestore.Timestamp;
+  // Legacy fields kept for migration
+  branch?: string;
+  department?: string;
+  role?: string;
+  status?: string;
+};
+
+export type EnvironmentDoc = {
+  name: string;
+  description: string;
+  ownerUserId: string;
+  status: "active" | "blocked";
+  inviteCode: string;
   createdAt: FirebaseFirestore.Timestamp;
   updatedAt: FirebaseFirestore.Timestamp;
 };
 
-export type OrderWindowDoc = {
-  windowId: string;
-  startDateTime: string; // ISO string
-  endDateTime: string;   // ISO string
+export type EnvironmentMemberDoc = {
+  environmentId: string;
+  userId: string;
+  role: "user" | "environment_admin";
+  status: "pending" | "approved" | "blocked";
+  joinedAt: FirebaseFirestore.Timestamp;
   updatedAt: FirebaseFirestore.Timestamp;
-  updatedBy: string;
 };
 
-export type GeneralOrderDetailsDoc = {
-  orderDate: string;
-  requesterName: string;
-  phoneNumber: string;
-  customerSite: string;
-  deliveryAddress: string;
-  matrixEmployeesCount: string;
-  courierNotes: string;
+export type ItemDoc = {
+  environmentId: string;
+  name: string;
+  unit: string;
+  category: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: FirebaseFirestore.Timestamp;
   updatedAt: FirebaseFirestore.Timestamp;
-  updatedBy: string;
+};
+
+export type SectionDoc = {
+  environmentId: string;
+  name: string;
+  status: "active" | "closed" | "archived";
+  startDateTime: string;
+  endDateTime: string;
+  createdAt: FirebaseFirestore.Timestamp;
+  updatedAt: FirebaseFirestore.Timestamp;
 };
 
 export type OrderDoc = {
+  environmentId: string;
+  sectionId: string;
   userId: string;
   userFullName: string;
   email: string;
-  branch: string;
-  department: string;
-  windowId: string;
+  phoneNumber: string;
+  status: "active" | "blocked";
   createdAt: FirebaseFirestore.Timestamp;
   updatedAt: FirebaseFirestore.Timestamp;
 };
 
 export type OrderItemDoc = {
+  environmentId: string;
+  sectionId: string;
   orderId: string;
-  itemId: number;
-  itemName: string;
+  itemId: string;
+  itemNameSnapshot: string;
   quantity: number;
-  orderNote: string;
+  note: string;
+  status: "active" | "blocked";
+  createdAt: FirebaseFirestore.Timestamp;
+  updatedAt: FirebaseFirestore.Timestamp;
 };

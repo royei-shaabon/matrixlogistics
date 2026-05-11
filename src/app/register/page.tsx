@@ -11,15 +11,13 @@ const PHONE_REGEX = /^(05\d{8}|\+9725\d{8})$/;
 const FIELDS = [
   { name: "email", label: "כתובת מייל", type: "email", placeholder: "your@email.com" },
   { name: "name", label: "שם מלא", type: "text", placeholder: "ישראל ישראלי" },
-  { name: "branch", label: "ענף", type: "text", placeholder: "שם הענף" },
-  { name: "department", label: "מדור", type: "text", placeholder: "שם המדור" },
   { name: "phone", label: "מספר טלפון", type: "tel", placeholder: "050-0000000" },
   { name: "password", label: "סיסמה", type: "password", placeholder: "לפחות 6 תווים" },
 ] as const;
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ email: "", name: "", branch: "", department: "", phone: "", password: "" });
+  const [form, setForm] = useState({ email: "", name: "", phone: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -42,13 +40,11 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, name: form.name, branch: form.branch, department: form.department, phone: form.phone }),
+        body: JSON.stringify({ token, name: form.name, phone: form.phone }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "שגיאה בהרשמה"); return; }
-      if (data.role === "admin") router.push("/admin");
-      else if (data.status === "pending") router.push("/pending");
-      else router.push("/order");
+      router.push("/environments");
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
       if (code === "auth/email-already-in-use") setError("כתובת מייל כבר קיימת במערכת");
@@ -62,12 +58,8 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "#F9FBFD" }}>
       <div className="w-full max-w-sm">
-        {/* Brand */}
         <div className="text-center mb-8">
-          <div
-            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
-            style={{ background: "#3B82F6" }}
-          >
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style={{ background: "#3B82F6" }}>
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
               <circle cx="9" cy="7" r="4" />
@@ -79,11 +71,7 @@ export default function RegisterPage() {
           <p className="text-sm mt-1" style={{ color: "#64748B" }}>מלא את הפרטים לקבלת גישה למערכת</p>
         </div>
 
-        {/* Card */}
-        <div
-          className="bg-white p-6 rounded-[18px]"
-          style={{ boxShadow: "0px 4px 12px rgba(15,23,42,0.06)", border: "1px solid #DCE7F3" }}
-        >
+        <div className="bg-white p-6 rounded-[18px]" style={{ boxShadow: "0px 4px 12px rgba(15,23,42,0.06)", border: "1px solid #DCE7F3" }}>
           <form onSubmit={handleSubmit} className="space-y-4">
             {FIELDS.map((field) => (
               <div key={field.name}>
@@ -103,10 +91,7 @@ export default function RegisterPage() {
             ))}
 
             {error && (
-              <div
-                className="rounded-xl px-4 py-3 text-sm font-medium"
-                style={{ background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA" }}
-              >
+              <div className="rounded-xl px-4 py-3 text-sm font-medium" style={{ background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA" }}>
                 {error}
               </div>
             )}

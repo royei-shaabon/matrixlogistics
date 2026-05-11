@@ -5,22 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
 
-interface Session {
+interface Section {
   id: string;
   name: string;
   status: "open" | "closed";
   startDateTime: string;
   endDateTime: string;
-}
-
-interface OrderDetails {
-  orderDate: string;
-  requesterName: string;
-  phoneNumber: string;
-  customerSite: string;
-  deliveryAddress: string;
-  matrixEmployeesCount: string;
-  courierNotes: string;
 }
 
 function formatDate(iso: string) {
@@ -32,51 +22,48 @@ function formatDate(iso: string) {
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [currentSession, setCurrentSession] = useState<Session | null>(null);
+  const [currentSection, setCurrentSection] = useState<Section | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [totalOrders, setTotalOrders] = useState(0);
   const [userName, setUserName] = useState("");
-  const [orderDetails, setOrderDetails] = useState<OrderDetails>({
-    orderDate: "", requesterName: "", phoneNumber: "",
-    customerSite: "", deliveryAddress: "",
-    matrixEmployeesCount: "", courierNotes: "נא להתקשר חצי שעה לפני הגעה",
-  });
-  const [detailsSaving, setDetailsSaving] = useState(false);
-  const [detailsMsg, setDetailsMsg] = useState("");
+  const [envName, setEnvName] = useState("");
+  const [envId, setEnvId] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [copyMsg, setCopyMsg] = useState("");
+  const [requireApproval, setRequireApproval] = useState(true);
+  const [togglingApproval, setTogglingApproval] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/me").then((r) => r.json()).then((d) => {
-      if (!d.user || d.user.role !== "admin") router.push("/login");
-      setUserName(d.user?.fullName || d.user?.name || "מנהל");
+      if (!d.user) { router.push("/login"); return; }
+      const isAdmin = d.user.globalRole === "super_admin" || d.user.environmentRole === "environment_admin";
+      if (!isAdmin) { router.push("/order"); return; }
+      if (d.user.globalRole === "super_admin") setIsSuperAdmin(true);
+      setUserName(d.user.fullName || d.user.name || "מנהל");
+      const eid = d.user.currentEnvironmentId;
+      if (eid) {
+        setEnvId(eid);
+        fetch(`/api/environments/${eid}`).then((r) => r.json()).then((env) => {
+          setEnvName(env.name || "");
+          setRequireApproval(env.requireApproval !== false);
+        });
+        fetch(`/api/environments/${eid}/invite`).then((r) => r.json()).then((inv) => {
+          setInviteCode(inv.inviteCode || "");
+        });
+      }
     });
     fetch("/api/admin/sessions").then((r) => r.json()).then((d) => {
-      const sessions: Session[] = d.sessions || [];
-      setCurrentSession(sessions.find((s) => s.status === "open") || sessions[0] || null);
-    });
-    fetch("/api/admin/order-details").then((r) => r.json()).then((d) => {
-      if (d.details) setOrderDetails((prev) => ({ ...prev, ...d.details }));
+      const sections: Section[] = d.sessions || [];
+      setCurrentSection(sections.find((s) => s.status === "open") || sections[0] || null);
     });
     fetch("/api/users").then((r) => r.json()).then((d) => {
-      if (d.users) setPendingCount(d.users.filter((u: { status: string }) => u.status === "pending").length);
+      if (d.users) setPendingCount(d.users.filter((u: { memberStatus: string }) => u.memberStatus === "pending").length);
     });
     fetch("/api/admin/summary").then((r) => r.json()).then((d) => {
       if (d.summary) setTotalOrders(d.summary.reduce((acc: number, r: { total: number }) => acc + r.total, 0));
     });
   }, [router]);
-
-  async function handleSaveDetails(e: React.FormEvent) {
-    e.preventDefault();
-    setDetailsMsg("");
-    setDetailsSaving(true);
-    await fetch("/api/admin/order-details", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(orderDetails),
-    });
-    setDetailsSaving(false);
-    setDetailsMsg("הפרטים נשמרו");
-    setTimeout(() => setDetailsMsg(""), 3000);
-  }
 
   async function handleLogout() {
     const { signOut } = await import("firebase/auth");
@@ -86,19 +73,34 @@ export default function AdminDashboard() {
     router.push("/login");
   }
 
-  function copyLink() {
-    navigator.clipboard.writeText(window.location.origin + "/register");
-    alert("קישור ההרשמה הועתק!");
+  async function handleToggleApproval() {
+    if (!envId) return;
+    setTogglingApproval(true);
+    const newVal = !requireApproval;
+    await fetch(`/api/environments/${envId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requireApproval: newVal }),
+    });
+    setRequireApproval(newVal);
+    setTogglingApproval(false);
+  }
+
+  function copyInviteLink() {
+    const link = `${window.location.origin}/environments/join/${inviteCode}`;
+    navigator.clipboard.writeText(link);
+    setCopyMsg("הועתק!");
+    setTimeout(() => setCopyMsg(""), 2000);
   }
 
   const now = Date.now();
-  const isOpen = !!currentSession &&
-    currentSession.status === "open" &&
-    now >= new Date(currentSession.startDateTime).getTime() &&
-    now <= new Date(currentSession.endDateTime).getTime();
-  const isPending = !!currentSession &&
-    currentSession.status === "open" &&
-    now < new Date(currentSession.startDateTime).getTime();
+  const isOpen = !!currentSection &&
+    currentSection.status === "open" &&
+    now >= new Date(currentSection.startDateTime).getTime() &&
+    now <= new Date(currentSection.endDateTime).getTime();
+  const isPending = !!currentSection &&
+    currentSection.status === "open" &&
+    now < new Date(currentSection.startDateTime).getTime();
 
   return (
     <div className="min-h-screen" style={{ background: "#F9FBFD", paddingBottom: "90px" }}>
@@ -107,15 +109,27 @@ export default function AdminDashboard() {
         <div>
           <p className="text-sm font-medium" style={{ color: "#64748B" }}>שלום,</p>
           <h1 className="text-xl font-bold" style={{ color: "#1E293B" }}>{userName}</h1>
+          {envName && <p className="text-xs mt-0.5" style={{ color: "#3B82F6" }}>{envName}</p>}
         </div>
         <div className="flex items-center gap-2 mt-1">
-          <button
-            onClick={copyLink}
-            className="text-xs font-medium px-3 py-1.5 rounded-xl border transition-colors"
-            style={{ color: "#64748B", borderColor: "#DCE7F3", background: "#FFFFFF" }}
-          >
-            🔗 שתף קישור
-          </button>
+          {isSuperAdmin && (
+            <Link
+              href="/super-admin"
+              className="text-xs font-medium px-3 py-1.5 rounded-xl border transition-colors"
+              style={{ color: "#7C3AED", borderColor: "#DDD6FE", background: "#F5F3FF" }}
+            >
+              ⚙ סופר אדמין
+            </Link>
+          )}
+          {inviteCode && (
+            <button
+              onClick={copyInviteLink}
+              className="text-xs font-medium px-3 py-1.5 rounded-xl border transition-colors"
+              style={{ color: "#3B82F6", borderColor: "#BFDBFE", background: "#EFF6FF" }}
+            >
+              {copyMsg || "🔗 הזמן"}
+            </button>
+          )}
           <button
             onClick={handleLogout}
             className="text-xs font-medium px-3 py-1.5 rounded-xl border transition-colors"
@@ -129,24 +143,18 @@ export default function AdminDashboard() {
       <div className="px-4 space-y-3">
         {/* KPI cards */}
         <div className="grid grid-cols-2 gap-3">
-          <div
-            className="rounded-[18px] p-4"
-            style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}
-          >
+          <div className="rounded-[18px] p-4" style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}>
             <p className="text-xs font-medium mb-1" style={{ color: "#64748B" }}>ממתינים לאישור</p>
             <p className="text-3xl font-bold" style={{ color: pendingCount > 0 ? "#EF4444" : "#1E293B" }}>{pendingCount}</p>
           </div>
-          <div
-            className="rounded-[18px] p-4"
-            style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}
-          >
+          <div className="rounded-[18px] p-4" style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}>
             <p className="text-xs font-medium mb-1" style={{ color: "#64748B" }}>יחידות שהוזמנו</p>
             <p className="text-3xl font-bold" style={{ color: "#3B82F6" }}>{totalOrders}</p>
           </div>
         </div>
 
-        {/* Current session status */}
-        {currentSession ? (
+        {/* Current section status */}
+        {currentSection ? (
           <div
             className="rounded-[18px] p-4"
             style={{
@@ -159,11 +167,11 @@ export default function AdminDashboard() {
                 <div className="flex items-center gap-2">
                   <span>{isOpen ? "✅" : isPending ? "⏳" : "🔒"}</span>
                   <span className="font-semibold text-sm" style={{ color: isOpen ? "#15803D" : isPending ? "#92400E" : "#C2410C" }}>
-                    {currentSession.name} {isPending ? "· ממתין לפתיחה" : ""}
+                    {currentSection.name} {isPending ? "· ממתין לפתיחה" : ""}
                   </span>
                 </div>
                 <p className="text-xs mt-1 mr-6" style={{ color: isOpen ? "#16A34A" : isPending ? "#A16207" : "#EA580C" }}>
-                  {formatDate(currentSession.startDateTime)} — {formatDate(currentSession.endDateTime)}
+                  {formatDate(currentSection.startDateTime)} — {formatDate(currentSection.endDateTime)}
                 </p>
               </div>
               <Link
@@ -198,59 +206,60 @@ export default function AdminDashboard() {
           </Link>
         )}
 
-        {/* Order details form */}
-        <div
-          className="rounded-[18px] p-5"
-          style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}
-        >
-          <h2 className="text-base font-bold mb-4" style={{ color: "#1E293B" }}>פרטי הזמנה כלליים</h2>
-          <form onSubmit={handleSaveDetails} className="space-y-3">
-            {([
-              { key: "orderDate", label: "תאריך הזמנה", placeholder: "01/06/2025" },
-              { key: "requesterName", label: "המזמין", placeholder: "שם מלא" },
-              { key: "phoneNumber", label: "מס׳ נייד", placeholder: "050-0000000" },
-              { key: "matrixEmployeesCount", label: "מס׳ עובדים באתר", placeholder: "מספר" },
-            ] as const).map(({ key, label, placeholder }) => (
-              <div key={key}>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "#64748B" }}>{label}</label>
-                <input
-                  type="text"
-                  value={orderDetails[key]}
-                  onChange={(e) => setOrderDetails((d) => ({ ...d, [key]: e.target.value }))}
-                  placeholder={placeholder}
-                  className="w-full border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  style={{ height: "48px", borderRadius: "12px", borderColor: "#DCE7F3", background: "#F8FAFC" }}
-                />
-              </div>
-            ))}
-            <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "#64748B" }}>הערות לשליח</label>
-              <input
-                type="text"
-                value={orderDetails.courierNotes}
-                onChange={(e) => setOrderDetails((d) => ({ ...d, courierNotes: e.target.value }))}
-                className="w-full border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                style={{ height: "48px", borderRadius: "12px", borderColor: "#DCE7F3", background: "#F8FAFC" }}
+        {/* Quick links */}
+        <div className="grid grid-cols-2 gap-3">
+          {envId && (
+            <Link
+              href="/admin/items"
+              className="rounded-[18px] p-4 bg-white flex flex-col gap-1"
+              style={{ border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}
+            >
+              <span className="text-sm font-semibold" style={{ color: "#1E293B" }}>ניהול פריטים</span>
+              <span className="text-xs" style={{ color: "#64748B" }}>הוסף / ערוך פריטים בסביבה</span>
+            </Link>
+          )}
+          <Link
+            href="/environments"
+            className="rounded-[18px] p-4 bg-white flex flex-col gap-1"
+            style={{ border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}
+          >
+            <span className="text-sm font-semibold" style={{ color: "#1E293B" }}>החלף סביבה</span>
+            <span className="text-xs" style={{ color: "#64748B" }}>עבור לסביבה אחרת</span>
+          </Link>
+        </div>
+
+        {/* Require approval toggle */}
+        {envId && (
+          <button
+            onClick={handleToggleApproval}
+            disabled={togglingApproval}
+            className="w-full rounded-[18px] p-4 bg-white flex items-center justify-between transition-opacity"
+            style={{ border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)", opacity: togglingApproval ? 0.6 : 1 }}
+          >
+            <div className="text-right">
+              <p className="text-sm font-semibold" style={{ color: "#1E293B" }}>אישור הצטרפות</p>
+              <p className="text-xs mt-0.5" style={{ color: requireApproval ? "#64748B" : "#16A34A" }}>
+                {requireApproval ? "חברים חדשים ממתינים לאישורך" : "הצטרפות חופשית — אין צורך באישור"}
+              </p>
+            </div>
+            <div
+              className="flex-shrink-0 relative transition-colors"
+              style={{
+                width: "44px", height: "26px", borderRadius: "13px",
+                background: requireApproval ? "#CBD5E1" : "#22C55E",
+              }}
+            >
+              <div
+                className="absolute top-[3px] transition-all"
+                style={{
+                  width: "20px", height: "20px", borderRadius: "50%", background: "#FFFFFF",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                  right: requireApproval ? "3px" : "21px",
+                }}
               />
             </div>
-            <p className="text-xs px-1" style={{ color: "#94A3B8" }}>
-              אתר לקוח: שלישות רמת גן · כתובת: בן גוריון 100, רמת גן
-            </p>
-            <div className="flex items-center gap-3">
-              <button
-                type="submit"
-                disabled={detailsSaving}
-                className="text-white font-semibold text-sm px-5 transition-all"
-                style={{ height: "44px", borderRadius: "12px", background: detailsSaving ? "#94A3B8" : "#1E293B" }}
-              >
-                {detailsSaving ? "שומר..." : "שמור פרטים"}
-              </button>
-              {detailsMsg && (
-                <span className="text-sm font-medium" style={{ color: "#22C55E" }}>{detailsMsg}</span>
-              )}
-            </div>
-          </form>
-        </div>
+          </button>
+        )}
       </div>
 
       <BottomNav isAdmin pendingCount={pendingCount > 0 ? pendingCount : undefined} />

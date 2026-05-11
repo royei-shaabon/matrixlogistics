@@ -1,17 +1,24 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { getAdminDb, COLLECTIONS } from "@/lib/firebase-admin";
 
 export default async function Home() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const db = getAdminDb();
-  const doc = await db.collection(COLLECTIONS.users).doc(session.userId).get();
-  if (!doc.exists) redirect("/login");
+  if (session.globalRole === "super_admin" && !session.currentEnvironmentId) {
+    redirect("/super-admin");
+  }
 
-  const user = doc.data()!;
-  if (user.role === "admin") redirect("/admin");
-  if (user.status === "pending") redirect("/pending");
+  if (!session.currentEnvironmentId) {
+    redirect("/environments");
+  }
+
+  if (session.environmentStatus === "pending") redirect("/pending");
+  if (session.environmentStatus === "blocked") redirect("/environments");
+
+  if (session.environmentRole === "environment_admin" || session.globalRole === "super_admin") {
+    redirect("/admin");
+  }
+
   redirect("/order");
 }

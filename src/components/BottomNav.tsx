@@ -54,6 +54,7 @@ function LayersIcon() {
   );
 }
 
+
 interface BottomNavProps {
   isAdmin?: boolean;
   pendingCount?: number;
@@ -68,10 +69,10 @@ export default function BottomNav({ isAdmin, pendingCount }: BottomNavProps) {
         className="fixed bottom-0 left-0 right-0 z-50 print:hidden"
         style={{ background: "#FFFFFF", borderTop: "1px solid #DCE7F3", paddingBottom: "env(safe-area-inset-bottom, 8px)" }}
       >
-        <div className="flex justify-center py-3">
-          <Link href="/order" className="flex flex-col items-center gap-1" style={{ color: "#3B82F6" }}>
+        <div className="flex">
+          <Link href="/order" className="flex-1 flex flex-col items-center justify-center py-3" style={{ color: pathname === "/order" ? "#3B82F6" : "#94A3B8" }}>
             <ClipboardIcon />
-            <span className="text-[11px] font-semibold">הגשת בקשה</span>
+            <span className="text-[11px] font-semibold mt-1">הגשת בקשה</span>
           </Link>
         </div>
       </nav>
@@ -82,7 +83,7 @@ export default function BottomNav({ isAdmin, pendingCount }: BottomNavProps) {
     { href: "/admin", label: "ראשי", Icon: HomeIcon },
     { href: "/admin/sessions", label: "סשנים", Icon: LayersIcon },
     { href: "/admin/summary", label: "סיכום", Icon: BarChartIcon },
-    { href: "/admin/users", label: "משתמשים", Icon: UsersIcon, badge: pendingCount },
+    { href: "/admin/users", label: "חברים", Icon: UsersIcon, badge: pendingCount },
   ];
 
   return (
@@ -101,18 +102,12 @@ export default function BottomNav({ isAdmin, pendingCount }: BottomNavProps) {
               style={{ color: isActive ? "#3B82F6" : "#94A3B8" }}
             >
               {isActive && (
-                <span
-                  className="absolute top-0 left-3 right-3 h-0.5 rounded-full"
-                  style={{ background: "#3B82F6" }}
-                />
+                <span className="absolute top-0 left-3 right-3 h-0.5 rounded-full" style={{ background: "#3B82F6" }} />
               )}
               <div className="relative">
                 <Icon />
                 {badge ? (
-                  <span
-                    className="absolute -top-1.5 -left-1.5 min-w-[16px] h-4 flex items-center justify-center text-[10px] font-bold text-white rounded-full px-1"
-                    style={{ background: "#EF4444" }}
-                  >
+                  <span className="absolute -top-1.5 -left-1.5 min-w-[16px] h-4 flex items-center justify-center text-[10px] font-bold text-white rounded-full px-1" style={{ background: "#EF4444" }}>
                     {badge}
                   </span>
                 ) : null}

@@ -9,7 +9,7 @@ const PHONE_REGEX = /^(05\d{8}|\+9725\d{8})$/;
 export default function CompleteRegistrationPage() {
   const router = useRouter();
   const [displayName, setDisplayName] = useState("");
-  const [form, setForm] = useState({ branch: "", department: "", phone: "" });
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -17,50 +17,32 @@ export default function CompleteRegistrationPage() {
   useEffect(() => {
     const auth = getFirebaseAuth();
     const user = auth.currentUser;
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+    if (!user) { router.push("/login"); return; }
     setDisplayName(user.displayName || "");
     setChecking(false);
   }, [router]);
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-
-    if (!PHONE_REGEX.test(form.phone.replace(/-/g, ""))) {
+    if (!PHONE_REGEX.test(phone.replace(/-/g, ""))) {
       setError("פורמט מספר הטלפון אינו תקין");
       return;
     }
-
     setLoading(true);
     try {
       const auth = getFirebaseAuth();
       const user = auth.currentUser;
       if (!user) { router.push("/login"); return; }
-
       const token = await user.getIdToken();
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token,
-          name: displayName || form.branch,
-          branch: form.branch,
-          department: form.department,
-          phone: form.phone,
-        }),
+        body: JSON.stringify({ token, name: displayName, phone }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "שגיאה בהרשמה"); return; }
-      if (data.role === "admin") router.push("/admin");
-      else if (data.status === "pending") router.push("/pending");
-      else router.push("/order");
+      router.push("/environments");
     } catch {
       setError("שגיאה, נסה שנית");
     } finally {
@@ -80,10 +62,7 @@ export default function CompleteRegistrationPage() {
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "#F9FBFD" }}>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div
-            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
-            style={{ background: "#3B82F6" }}
-          >
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style={{ background: "#3B82F6" }}>
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
               <circle cx="9" cy="7" r="4" />
@@ -92,56 +71,37 @@ export default function CompleteRegistrationPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold" style={{ color: "#1E293B" }}>השלמת פרטים</h1>
-          {displayName && (
-            <p className="text-sm mt-1" style={{ color: "#64748B" }}>שלום, {displayName}</p>
-          )}
-          <p className="text-sm mt-1" style={{ color: "#64748B" }}>נא להשלים את פרטי הענף והמדור</p>
+          {displayName && <p className="text-sm mt-1" style={{ color: "#64748B" }}>שלום, {displayName}</p>}
         </div>
 
-        <div
-          className="bg-white p-6 rounded-[18px]"
-          style={{ boxShadow: "0px 4px 12px rgba(15,23,42,0.06)", border: "1px solid #DCE7F3" }}
-        >
+        <div className="bg-white p-6 rounded-[18px]" style={{ boxShadow: "0px 4px 12px rgba(15,23,42,0.06)", border: "1px solid #DCE7F3" }}>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {displayName && (
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: "#1E293B" }}>שם מלא</label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  required
-                  className="w-full border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow"
-                  style={{ height: "52px", borderRadius: "12px", borderColor: "#DCE7F3", background: "#F8FAFC" }}
-                />
-              </div>
-            )}
-
-            {([
-              { name: "branch", label: "ענף", placeholder: "שם הענף" },
-              { name: "department", label: "מדור", placeholder: "שם המדור" },
-              { name: "phone", label: "מספר טלפון", placeholder: "050-0000000" },
-            ] as const).map((field) => (
-              <div key={field.name}>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: "#1E293B" }}>{field.label}</label>
-                <input
-                  type={field.name === "phone" ? "tel" : "text"}
-                  name={field.name}
-                  value={form[field.name]}
-                  onChange={handleChange}
-                  required
-                  placeholder={field.placeholder}
-                  className="w-full border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow"
-                  style={{ height: "52px", borderRadius: "12px", borderColor: "#DCE7F3", background: "#F8FAFC" }}
-                />
-              </div>
-            ))}
+            <div>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: "#1E293B" }}>שם מלא</label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                required
+                className="w-full border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow"
+                style={{ height: "52px", borderRadius: "12px", borderColor: "#DCE7F3", background: "#F8FAFC" }}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: "#1E293B" }}>מספר טלפון</label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+                placeholder="050-0000000"
+                className="w-full border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow"
+                style={{ height: "52px", borderRadius: "12px", borderColor: "#DCE7F3", background: "#F8FAFC" }}
+              />
+            </div>
 
             {error && (
-              <div
-                className="rounded-xl px-4 py-3 text-sm font-medium"
-                style={{ background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA" }}
-              >
+              <div className="rounded-xl px-4 py-3 text-sm font-medium" style={{ background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA" }}>
                 {error}
               </div>
             )}

@@ -12,10 +12,17 @@ function getSecret(): Uint8Array {
 const COOKIE_NAME = "matrix_session";
 
 export interface SessionPayload {
-  userId: string; // Firebase Auth UID
+  userId: string;
   email: string;
-  role: "admin" | "user";
-  status: "pending" | "approved";
+  globalRole: "user" | "super_admin";
+  globalStatus: "active" | "blocked";
+  currentEnvironmentId?: string;
+  environmentRole?: "user" | "environment_admin";
+  environmentStatus?: "pending" | "approved" | "blocked";
+}
+
+export function isEnvAdmin(session: SessionPayload): boolean {
+  return session.globalRole === "super_admin" || session.environmentRole === "environment_admin";
 }
 
 export async function createSession(payload: SessionPayload): Promise<string> {

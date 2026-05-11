@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, isEnvAdmin } from "@/lib/auth";
 import { getAdminDb, COLLECTIONS } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { randomUUID } from "crypto";
@@ -25,7 +25,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || !isEnvAdmin(session)) {
     return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
   }
 
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session || !isEnvAdmin(session)) {
     return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
   }
 
