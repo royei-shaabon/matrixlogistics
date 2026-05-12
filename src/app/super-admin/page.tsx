@@ -11,6 +11,10 @@ interface Environment {
   status?: string;
   requireApproval?: boolean;
   createdAt?: string;
+  ownerName?: string | null;
+  ownerEmail?: string | null;
+  memberCount?: number;
+  orderCount?: number;
 }
 
 interface GlobalUser {
@@ -261,9 +265,22 @@ export default function SuperAdminPage() {
                                 </span>
                               )}
                             </div>
-                            {env.description && (
-                              <p className="text-xs mt-1 truncate" style={{ color: "#475569" }}>{env.description}</p>
+                            {env.ownerName && (
+                              <p className="text-xs mt-1" style={{ color: "#64748B" }}>
+                                נוצר ע"י <span style={{ color: "#94A3B8" }}>{env.ownerName}</span>
+                                {env.ownerEmail && env.ownerEmail !== env.ownerName && (
+                                  <span style={{ color: "#475569" }}> · {env.ownerEmail}</span>
+                                )}
+                              </p>
                             )}
+                            <div className="flex items-center gap-3 mt-2">
+                              <span className="text-xs font-medium" style={{ color: "#64748B" }}>
+                                👥 <span style={{ color: "#94A3B8" }}>{env.memberCount ?? 0}</span> חברים
+                              </span>
+                              <span className="text-xs font-medium" style={{ color: "#64748B" }}>
+                                📦 <span style={{ color: "#94A3B8" }}>{env.orderCount ?? 0}</span> הזמנות
+                              </span>
+                            </div>
                           </div>
                         </div>
 

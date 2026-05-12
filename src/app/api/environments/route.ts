@@ -15,14 +15,46 @@ export async function GET() {
 
   if (session.globalRole === "super_admin") {
     const snap = await db.collection(COLLECTIONS.environments).get();
-    const environments = snap.docs
-      .map((d) => ({ id: d.id, ...d.data() }))
-      .sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
-        const at = (a.createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0;
-        const bt = (b.createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0;
-        return bt - at;
-      });
-    return NextResponse.json({ environments });
+    const envDocs = snap.docs.sort((a, b) => {
+      const at = (a.data().createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0;
+      const bt = (b.data().createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0;
+      return bt - at;
+    });
+
+    // Fetch owner user names, member counts, order counts in parallel per env
+    const enriched = await Promise.all(
+      envDocs.map(async (d) => {
+        const data = d.data();
+        const envId = d.id;
+
+        const [ownerDoc, membersSnap, ordersSnap] = await Promise.all([
+          data.ownerUserId
+            ? db.collection(COLLECTIONS.users).doc(data.ownerUserId).get()
+            : Promise.resolve(null),
+          db.collection(COLLECTIONS.environmentMembers)
+            .where("environmentId", "==", envId)
+            .where("status", "==", "approved")
+            .count()
+            .get(),
+          db.collection(COLLECTIONS.orders)
+            .where("environmentId", "==", envId)
+            .count()
+            .get(),
+        ]);
+
+        const ownerData = ownerDoc?.exists ? ownerDoc.data() : null;
+        return {
+          id: envId,
+          ...data,
+          ownerName: ownerData?.fullName || ownerData?.email || null,
+          ownerEmail: ownerData?.email || null,
+          memberCount: membersSnap.data().count,
+          orderCount: ordersSnap.data().count,
+        };
+      })
+    );
+
+    return NextResponse.json({ environments: enriched });
   }
 
   const memberships = await db
