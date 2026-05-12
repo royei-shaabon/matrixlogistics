@@ -17,9 +17,6 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   if (!envDoc.exists || envStatus === "blocked") {
     return NextResponse.json({ error: "סביבה לא נמצאה או חסומה" }, { status: 404 });
   }
-  if (envStatus === "pending" && session.globalRole !== "super_admin") {
-    return NextResponse.json({ error: "הסביבה ממתינה לאישור מנהל ראשי" }, { status: 403 });
-  }
 
   let memberRole: "user" | "environment_admin" = "user";
   let memberStatus: "pending" | "approved" | "blocked" = "pending";
@@ -46,6 +43,11 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
     memberRole = member.role as "user" | "environment_admin";
     memberStatus = member.status as "pending" | "approved" | "blocked";
+  }
+
+  // Only environment_admin (owner) may enter a pending environment; regular users must wait for approval
+  if (envStatus === "pending" && session.globalRole !== "super_admin" && memberRole !== "environment_admin") {
+    return NextResponse.json({ error: "הסביבה ממתינה לאישור מנהל ראשי" }, { status: 403 });
   }
 
   const newSession = await createSession({

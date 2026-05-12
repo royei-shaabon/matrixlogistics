@@ -28,8 +28,6 @@ export default function AdminDashboard() {
   const [userName, setUserName] = useState("");
   const [envName, setEnvName] = useState("");
   const [envId, setEnvId] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
-  const [copyMsg, setCopyMsg] = useState("");
   const [requireApproval, setRequireApproval] = useState(true);
   const [togglingApproval, setTogglingApproval] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
@@ -48,9 +46,7 @@ export default function AdminDashboard() {
           setEnvName(env.name || "");
           setRequireApproval(env.requireApproval !== false);
         });
-        fetch(`/api/environments/${eid}/invite`).then((r) => r.json()).then((inv) => {
-          setInviteCode(inv.inviteCode || "");
-        });
+
       }
     });
     fetch("/api/admin/sessions").then((r) => r.json()).then((d) => {
@@ -86,13 +82,6 @@ export default function AdminDashboard() {
     setTogglingApproval(false);
   }
 
-  function copyInviteLink() {
-    const link = `${window.location.origin}/environments/join/${inviteCode}`;
-    navigator.clipboard.writeText(link);
-    setCopyMsg("הועתק!");
-    setTimeout(() => setCopyMsg(""), 2000);
-  }
-
   const now = Date.now();
   const isOpen = !!currentSection &&
     currentSection.status === "open" &&
@@ -120,15 +109,6 @@ export default function AdminDashboard() {
             >
               ⚙ סופר אדמין
             </Link>
-          )}
-          {inviteCode && (
-            <button
-              onClick={copyInviteLink}
-              className="text-xs font-medium px-3 py-1.5 rounded-xl border transition-colors"
-              style={{ color: "#3B82F6", borderColor: "#BFDBFE", background: "#EFF6FF" }}
-            >
-              {copyMsg || "🔗 הזמן"}
-            </button>
           )}
           <button
             onClick={handleLogout}

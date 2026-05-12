@@ -118,12 +118,13 @@ export default function EnvironmentsPage() {
         ) : (
           envs.map((env) => {
             const envPending = env.status === "pending";
-            const badge = envPending
+            const isEnvAdmin = env.memberRole === "environment_admin";
+            const badge = (envPending && !isEnvAdmin)
               ? envStatusLabel()
               : env.memberStatus
               ? memberStatusLabel(env.memberStatus)
               : null;
-            const canEnter = !envPending && (!env.memberStatus || env.memberStatus === "approved");
+            const canEnter = (!envPending || isEnvAdmin) && (!env.memberStatus || env.memberStatus === "approved");
             return (
               <div
                 key={env.id}

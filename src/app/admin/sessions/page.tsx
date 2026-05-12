@@ -83,6 +83,9 @@ export default function SessionsPage() {
   const [endAt, setEndAt] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
+  const [envId, setEnvId] = useState("");
+  const [itemCount, setItemCount] = useState<number | null>(null);
+  const [shareMsg, setShareMsg] = useState<string | null>(null);
 
   // PDF modal state
   const [pdfSession, setPdfSession] = useState<Section | null>(null);
@@ -104,6 +107,14 @@ export default function SessionsPage() {
       if (!d.user) { router.push("/login"); return; }
       const isAdmin = d.user.globalRole === "super_admin" || d.user.environmentRole === "environment_admin";
       if (!isAdmin) { router.push("/order"); return; }
+      const eid = d.user.currentEnvironmentId;
+      if (eid) {
+        setEnvId(eid);
+        fetch(`/api/environments/${eid}/items`).then((r) => r.json()).then((data) => {
+          const active = (data.items || []).filter((i: { status?: string }) => i.status !== "inactive");
+          setItemCount(active.length);
+        });
+      }
     });
     fetch("/api/users").then((r) => r.json()).then((d) => {
       if (d.users) setPendingCount(d.users.filter((u: { memberStatus: string }) => u.memberStatus === "pending").length);
@@ -118,9 +129,20 @@ export default function SessionsPage() {
     setLoading(false);
   }
 
+  function handleShare(sessId: string) {
+    const link = `${window.location.origin}/environments/${envId}/enter`;
+    navigator.clipboard.writeText(link);
+    setShareMsg(sessId);
+    setTimeout(() => setShareMsg(null), 2000);
+  }
+
   async function handleCreate(e: React.SyntheticEvent) {
     e.preventDefault();
     if (!newName.trim() || !startAt || !endAt) return;
+    if (itemCount === 0) {
+      setCreateError("לא ניתן ליצור סשן הגשה ללא פריטים. יש להוסיף פריטים תחילה.");
+      return;
+    }
     setCreating(true);
     setCreateError("");
     const res = await fetch("/api/admin/sessions", {
@@ -242,7 +264,21 @@ export default function SessionsPage() {
             <button type="submit" disabled={creating || !newName.trim() || !startAt || !endAt} className="w-full text-white font-semibold text-sm transition-all" style={{ height: "44px", borderRadius: "12px", background: creating ? "#93C5FD" : "#3B82F6" }}>
               {creating ? "יוצר..." : "פתח סשן"}
             </button>
-            {createError && <p className="text-xs" style={{ color: "#EF4444" }}>{createError}</p>}
+            {createError && (
+              <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FEF2F2", border: "1px solid #FECACA" }}>
+                <p className="font-medium mb-2" style={{ color: "#EF4444" }}>{createError}</p>
+                {itemCount === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => router.push("/admin/items")}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white"
+                    style={{ background: "#3B82F6" }}
+                  >
+                    הוסף פריטים
+                  </button>
+                )}
+              </div>
+            )}
           </form>
         </div>
 
@@ -283,6 +319,15 @@ export default function SessionsPage() {
                         <button onClick={() => openPdfModal(sess)} className="text-xs font-semibold px-3 transition-all" style={{ height: "32px", borderRadius: "8px", background: "#F1F5F9", color: "#475569", border: "1px solid #DCE7F3" }}>PDF ⬇</button>
                         {effStatus === "open" && (
                           <button onClick={() => router.push("/order")} className="text-white text-xs font-semibold px-3 transition-all" style={{ height: "32px", borderRadius: "8px", background: "#3B82F6" }}>הגש בקשה</button>
+                        )}
+                        {(effStatus === "open" || effStatus === "pending") && envId && (
+                          <button
+                            onClick={() => handleShare(sess.id)}
+                            className="text-xs font-semibold px-3 transition-all"
+                            style={{ height: "32px", borderRadius: "8px", background: shareMsg === sess.id ? "#F0FDF4" : "#F8FAFC", color: shareMsg === sess.id ? "#15803D" : "#3B82F6", border: `1px solid ${shareMsg === sess.id ? "#BBF7D0" : "#BFDBFE"}` }}
+                          >
+                            {shareMsg === sess.id ? "✓ הועתק" : "🔗 שתף סשן"}
+                          </button>
                         )}
                         {(effStatus === "open" || effStatus === "pending") && (
                           <button onClick={() => handleClose(sess.id)} disabled={isSaving} className="text-xs font-medium px-3 border transition-all" style={{ height: "32px", borderRadius: "8px", borderColor: "#FED7AA", color: "#C2410C", background: "#FFF7ED" }}>
