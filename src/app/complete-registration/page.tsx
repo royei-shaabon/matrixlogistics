@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase-client";
 
 const PHONE_REGEX = /^(05\d{8}|\+9725\d{8})$/;
@@ -16,10 +17,12 @@ export default function CompleteRegistrationPage() {
 
   useEffect(() => {
     const auth = getFirebaseAuth();
-    const user = auth.currentUser;
-    if (!user) { router.push("/login"); return; }
-    setDisplayName(user.displayName || "");
-    setChecking(false);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) { router.push("/login"); return; }
+      setDisplayName(user.displayName || "");
+      setChecking(false);
+    });
+    return () => unsubscribe();
   }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {

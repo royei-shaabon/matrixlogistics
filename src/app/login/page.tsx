@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase-client";
 
 export default function LoginPage() {
@@ -14,31 +14,34 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  useEffect(() => {
+    const auth = getFirebaseAuth();
+    setGoogleLoading(true);
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (!result) { setGoogleLoading(false); return; }
+        const token = await result.user.getIdToken();
+        const res = await fetch("/api/auth/google", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+        const data = await res.json();
+        if (!res.ok) { setError(data.error || "שגיאה בכניסה עם גוגל"); setGoogleLoading(false); return; }
+        if (data.needsRegistration) { router.push("/complete-registration"); return; }
+        router.push(data.globalRole === "super_admin" ? "/super-admin" : "/environments");
+      })
+      .catch(() => { setGoogleLoading(false); });
+  }, [router]);
+
   async function handleGoogleSignIn() {
     setError("");
     setGoogleLoading(true);
     try {
       const auth = getFirebaseAuth();
-      const credential = await signInWithPopup(auth, new GoogleAuthProvider());
-      const token = await credential.user.getIdToken();
-      const res = await fetch("/api/auth/google", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "שגיאה בכניסה עם גוגל"); return; }
-      if (data.needsRegistration) { router.push("/complete-registration"); return; }
-      router.push(data.globalRole === "super_admin" ? "/super-admin" : "/environments");
-    } catch (err: unknown) {
-      const code = (err as { code?: string }).code;
-      if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return;
-      if (code === "auth/account-exists-with-different-credential") {
-        setError("חשבון עם מייל זה כבר קיים עם סיסמה. אנא היכנס עם מייל וסיסמה.");
-      } else {
-        setError("שגיאה בכניסה עם גוגל, נסה שנית");
-      }
-    } finally {
+      await signInWithRedirect(auth, new GoogleAuthProvider());
+    } catch {
+      setError("שגיאה בכניסה עם גוגל, נסה שנית");
       setGoogleLoading(false);
     }
   }
