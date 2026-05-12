@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
 
   const uid = decoded.uid;
   const email = decoded.email || "";
+  const SUPER_ADMIN_EMAIL = "shaabon.royei@gmail.com";
 
   const doc = await db.collection(COLLECTIONS.users).doc(uid).get();
 
@@ -30,13 +31,14 @@ export async function POST(req: NextRequest) {
       if (data.globalStatus === "blocked") {
         return NextResponse.json({ error: "חשבונך חסום" }, { status: 403 });
       }
+      const effectiveRole = email === SUPER_ADMIN_EMAIL ? "super_admin" : (data.globalRole || "user");
       const sessionToken = await createSession({
         userId: existing.id,
         email,
-        globalRole: data.globalRole || "user",
+        globalRole: effectiveRole,
         globalStatus: data.globalStatus || "active",
       });
-      const res = NextResponse.json({ ok: true, globalRole: data.globalRole || "user" });
+      const res = NextResponse.json({ ok: true, globalRole: effectiveRole });
       return setSessionCookie(res, sessionToken);
     }
     return NextResponse.json({ needsRegistration: true });
@@ -47,13 +49,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "חשבונך חסום" }, { status: 403 });
   }
 
+  const effectiveRole = email === SUPER_ADMIN_EMAIL ? "super_admin" : (data.globalRole || "user");
   const sessionToken = await createSession({
     userId: uid,
     email,
-    globalRole: data.globalRole || "user",
+    globalRole: effectiveRole,
     globalStatus: data.globalStatus || "active",
   });
 
-  const res = NextResponse.json({ ok: true, globalRole: data.globalRole || "user" });
+  const res = NextResponse.json({ ok: true, globalRole: effectiveRole });
   return setSessionCookie(res, sessionToken);
 }

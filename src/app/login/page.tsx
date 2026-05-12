@@ -29,7 +29,7 @@ export default function LoginPage() {
       const data = await res.json();
       if (!res.ok) { setError(data.error || "שגיאה בכניסה עם גוגל"); return; }
       if (data.needsRegistration) { router.push("/complete-registration"); return; }
-      router.push("/environments");
+      router.push(data.globalRole === "super_admin" ? "/super-admin" : "/environments");
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
       if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return;
@@ -58,7 +58,7 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "שגיאה בכניסה"); return; }
-      router.push("/environments");
+      router.push(data.globalRole === "super_admin" ? "/super-admin" : "/environments");
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
       if (code === "auth/invalid-credential" || code === "auth/user-not-found" || code === "auth/wrong-password") {
