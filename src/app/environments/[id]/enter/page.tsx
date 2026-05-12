@@ -23,8 +23,7 @@ export default function EnterEnvironmentPage() {
           setError(data.error);
           return;
         }
-        // Always go to /order so members can submit items
-        router.push("/order");
+        router.push(data.redirect || "/order");
       })
       .catch(() => setError("שגיאה בכניסה לסביבה"));
   }, [id, router]);

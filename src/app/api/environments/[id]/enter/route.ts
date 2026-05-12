@@ -33,16 +33,29 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       .get();
 
     if (memberSnap.empty) {
-      return NextResponse.json({ error: "אינך חבר בסביבה זו" }, { status: 403 });
+      // Auto-join: create membership respecting requireApproval setting
+      const requireApproval = envDoc.data()?.requireApproval !== false;
+      const autoStatus = requireApproval ? "pending" : "approved";
+      const { FieldValue } = await import("firebase-admin/firestore");
+      const now = FieldValue.serverTimestamp();
+      await db.collection(COLLECTIONS.environmentMembers).add({
+        environmentId: id,
+        userId: session.userId,
+        role: "user",
+        status: autoStatus,
+        joinedAt: now,
+        updatedAt: now,
+      });
+      memberRole = "user";
+      memberStatus = autoStatus;
+    } else {
+      const member = memberSnap.docs[0].data();
+      if (member.status === "blocked") {
+        return NextResponse.json({ error: "גישתך לסביבה זו חסומה" }, { status: 403 });
+      }
+      memberRole = member.role as "user" | "environment_admin";
+      memberStatus = member.status as "pending" | "approved" | "blocked";
     }
-
-    const member = memberSnap.docs[0].data();
-    if (member.status === "blocked") {
-      return NextResponse.json({ error: "גישתך לסביבה זו חסומה" }, { status: 403 });
-    }
-
-    memberRole = member.role as "user" | "environment_admin";
-    memberStatus = member.status as "pending" | "approved" | "blocked";
   }
 
   // Only environment_admin (owner) may enter a pending environment; regular users must wait for approval
