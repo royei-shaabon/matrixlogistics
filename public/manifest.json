@@ -1,0 +1,25 @@
+{
+  "name": "Get Supply",
+  "short_name": "Get Supply",
+  "description": "מערכת הגשת בקשות לוגיסטיות",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F9FBFD",
+  "theme_color": "#3B82F6",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

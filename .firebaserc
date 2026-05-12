@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "matrix-logistic-6355c"
+  },
+  "targets": {
+    "matrix-logistic-6355c": {
+      "hosting": {
+        "get-supply": ["get-supply"]
+      }
+    }
+  }
+}

@@ -13,9 +13,16 @@ export const metadata: Metadata = {
   title: "הזמנת אספקה - Get Supply",
   description: "מערכת הגשת בקשות לוגיסטיות Get Supply",
   viewport: "width=device-width, initial-scale=1, viewport-fit=cover",
+  manifest: "/manifest.json",
   icons: {
     icon: "/icon.png",
     apple: "/icon.png",
+    shortcut: "/icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Get Supply",
   },
 };
 
