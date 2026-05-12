@@ -9,7 +9,7 @@ function getSecret(): Uint8Array {
   return new TextEncoder().encode(secret || "matrix-supply-secret-key-change-in-production");
 }
 
-const COOKIE_NAME = "matrix_session";
+const COOKIE_NAME = "__session";
 
 export interface SessionPayload {
   userId: string;
