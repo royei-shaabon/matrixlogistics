@@ -84,6 +84,8 @@ export default function SessionsPage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
   const [envId, setEnvId] = useState("");
+  const [envName, setEnvName] = useState("");
+  const [userName, setUserName] = useState("");
   const [itemCount, setItemCount] = useState<number | null>(null);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
 
@@ -107,9 +109,13 @@ export default function SessionsPage() {
       if (!d.user) { router.push("/login"); return; }
       const isAdmin = d.user.globalRole === "super_admin" || d.user.environmentRole === "environment_admin";
       if (!isAdmin) { router.push("/order"); return; }
+      setUserName(d.user.fullName || d.user.name || "");
       const eid = d.user.currentEnvironmentId;
       if (eid) {
         setEnvId(eid);
+        fetch(`/api/environments/${eid}`).then((r) => r.json()).then((env) => {
+          if (env.name) setEnvName(env.name);
+        });
         fetch(`/api/environments/${eid}/items`).then((r) => r.json()).then((data) => {
           const active = (data.items || []).filter((i: { status?: string }) => i.status !== "inactive");
           setItemCount(active.length);
@@ -129,10 +135,25 @@ export default function SessionsPage() {
     setLoading(false);
   }
 
-  function handleShare(sessId: string) {
+  async function handleShare(sess: Section) {
     const link = `${window.location.origin}/environments/${envId}/enter`;
-    navigator.clipboard.writeText(link);
-    setShareMsg(sessId);
+    let code = "";
+    try {
+      const r = await fetch(`/api/environments/${envId}/invite`);
+      const d = await r.json();
+      if (d.inviteCode) {
+        code = d.inviteCode.slice(0, 8);
+      } else {
+        const r2 = await fetch(`/api/environments/${envId}/invite`, { method: "POST" });
+        const d2 = await r2.json();
+        code = (d2.inviteCode || "").slice(0, 8);
+      }
+    } catch { /* ignore */ }
+    const by = userName ? ` של ${userName}` : "";
+    const env = envName ? ` ב${envName}` : "";
+    const msg = `הוזמנת לסשן "${sess.name}"${by}${env}${code ? `\nקוד הזמנה: ${code}` : ""}\n${link}`;
+    navigator.clipboard.writeText(msg);
+    setShareMsg(sess.id);
     setTimeout(() => setShareMsg(null), 2000);
   }
 
@@ -254,11 +275,11 @@ export default function SessionsPage() {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: "#64748B" }}>מתאריך</label>
-                <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} required className="w-full border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" style={{ height: "44px", borderRadius: "12px", borderColor: "#DCE7F3", background: "#F8FAFC" }} />
+                <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} required className="w-full border focus:outline-none focus:ring-2 focus:ring-blue-400" style={{ height: "44px", borderRadius: "12px", borderColor: "#DCE7F3", background: "#F8FAFC", fontSize: "12px", padding: "0 6px", minWidth: 0 }} />
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: "#64748B" }}>עד תאריך</label>
-                <input type="datetime-local" value={endAt} onChange={(e) => setEndAt(e.target.value)} required className="w-full border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" style={{ height: "44px", borderRadius: "12px", borderColor: "#DCE7F3", background: "#F8FAFC" }} />
+                <input type="datetime-local" value={endAt} onChange={(e) => setEndAt(e.target.value)} required className="w-full border focus:outline-none focus:ring-2 focus:ring-blue-400" style={{ height: "44px", borderRadius: "12px", borderColor: "#DCE7F3", background: "#F8FAFC", fontSize: "12px", padding: "0 6px", minWidth: 0 }} />
               </div>
             </div>
             <button type="submit" disabled={creating || !newName.trim() || !startAt || !endAt} className="w-full text-white font-semibold text-sm transition-all" style={{ height: "44px", borderRadius: "12px", background: creating ? "#93C5FD" : "#3B82F6" }}>
@@ -322,7 +343,7 @@ export default function SessionsPage() {
                         )}
                         {(effStatus === "open" || effStatus === "pending") && envId && (
                           <button
-                            onClick={() => handleShare(sess.id)}
+                            onClick={() => handleShare(sess)}
                             className="text-xs font-semibold px-3 transition-all"
                             style={{ height: "32px", borderRadius: "8px", background: shareMsg === sess.id ? "#F0FDF4" : "#F8FAFC", color: shareMsg === sess.id ? "#15803D" : "#3B82F6", border: `1px solid ${shareMsg === sess.id ? "#BBF7D0" : "#BFDBFE"}` }}
                           >
