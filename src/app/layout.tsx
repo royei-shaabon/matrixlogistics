@@ -10,6 +10,7 @@ const heebo = Heebo({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://get-supply.web.app"),
   title: "הזמנת אספקה - Get Supply",
   description: "מערכת הגשת בקשות לוגיסטיות Get Supply",
   viewport: "width=device-width, initial-scale=1, viewport-fit=cover",
@@ -23,6 +24,14 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "default",
     title: "Get Supply",
+  },
+  openGraph: {
+    title: "Get Supply",
+    description: "מערכת הגשת בקשות לוגיסטיות",
+    url: "https://get-supply.web.app",
+    siteName: "Get Supply",
+    images: [{ url: "/icon.png", width: 512, height: 512, alt: "Get Supply" }],
+    type: "website",
   },
 };
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from "firebase/auth";
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase-client";
 
 export default function LoginPage() {
@@ -12,11 +12,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(true);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
-    setGoogleLoading(true);
     getRedirectResult(auth)
       .then(async (result) => {
         if (!result) { setGoogleLoading(false); return; }
@@ -34,15 +33,43 @@ export default function LoginPage() {
       .catch(() => { setGoogleLoading(false); });
   }, [router]);
 
+  async function processGoogleResult(token: string) {
+    const res = await fetch("/api/auth/google", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+    const data = await res.json();
+    if (!res.ok) { setError(data.error || "שגיאה בכניסה עם גוגל"); setGoogleLoading(false); return; }
+    if (data.needsRegistration) { router.push("/complete-registration"); return; }
+    router.push(data.globalRole === "super_admin" ? "/super-admin" : "/environments");
+  }
+
   async function handleGoogleSignIn() {
     setError("");
     setGoogleLoading(true);
+    const auth = getFirebaseAuth();
+    const provider = new GoogleAuthProvider();
     try {
-      const auth = getFirebaseAuth();
-      await signInWithRedirect(auth, new GoogleAuthProvider());
-    } catch {
-      setError("שגיאה בכניסה עם גוגל, נסה שנית");
-      setGoogleLoading(false);
+      const result = await signInWithPopup(auth, provider);
+      const token = await result.user.getIdToken();
+      await processGoogleResult(token);
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code === "auth/popup-blocked" || code === "auth/popup-cancelled-by-user") {
+        // Popup blocked (e.g. iOS Safari) — fall back to redirect
+        try {
+          await signInWithRedirect(auth, provider);
+        } catch {
+          setError("שגיאה בכניסה עם גוגל, נסה שנית");
+          setGoogleLoading(false);
+        }
+      } else if (code === "auth/cancelled-popup-request") {
+        setGoogleLoading(false);
+      } else {
+        setError("שגיאה בכניסה עם גוגל, נסה שנית");
+        setGoogleLoading(false);
+      }
     }
   }
 
