@@ -24,7 +24,7 @@ steps:
       - "--platform=managed"
       - "--region=me-west1"
       - "--allow-unauthenticated"
-      - "--set-secrets=JWT_SECRET=jwt-secret-$_ENV:latest"
+      - "--set-secrets=JWT_SECRET=jwt-secret-$_ENV:latest,GOOGLE_CLIENT_SECRET=google-oauth-secret:latest"
       - "--set-env-vars=NODE_ENV=production"
       - "--min-instances=0"
       - "--memory=512Mi"

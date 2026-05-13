@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase-client";
 
 export default function LoginPage() {
@@ -12,65 +12,19 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(true);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
-    const auth = getFirebaseAuth();
-    getRedirectResult(auth)
-      .then(async (result) => {
-        if (!result) { setGoogleLoading(false); return; }
-        const token = await result.user.getIdToken();
-        const res = await fetch("/api/auth/google", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token }),
-        });
-        const data = await res.json();
-        if (!res.ok) { setError(data.error || "שגיאה בכניסה עם גוגל"); setGoogleLoading(false); return; }
-        if (data.needsRegistration) { router.push("/complete-registration"); return; }
-        router.push(data.globalRole === "super_admin" ? "/super-admin" : "/environments");
-      })
-      .catch(() => { setGoogleLoading(false); });
-  }, [router]);
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get("error");
+    if (err === "blocked") setError("חשבונך חסום");
+    else if (err) setError("שגיאה בכניסה עם גוגל, נסה שנית");
+  }, []);
 
-  async function processGoogleResult(token: string) {
-    const res = await fetch("/api/auth/google", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
-    });
-    const data = await res.json();
-    if (!res.ok) { setError(data.error || "שגיאה בכניסה עם גוגל"); setGoogleLoading(false); return; }
-    if (data.needsRegistration) { router.push("/complete-registration"); return; }
-    router.push(data.globalRole === "super_admin" ? "/super-admin" : "/environments");
-  }
-
-  async function handleGoogleSignIn() {
+  function handleGoogleSignIn() {
     setError("");
     setGoogleLoading(true);
-    const auth = getFirebaseAuth();
-    const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const token = await result.user.getIdToken();
-      await processGoogleResult(token);
-    } catch (err: unknown) {
-      const code = (err as { code?: string }).code;
-      if (code === "auth/popup-blocked" || code === "auth/popup-cancelled-by-user") {
-        // Popup blocked (e.g. iOS Safari) — fall back to redirect
-        try {
-          await signInWithRedirect(auth, provider);
-        } catch {
-          setError("שגיאה בכניסה עם גוגל, נסה שנית");
-          setGoogleLoading(false);
-        }
-      } else if (code === "auth/cancelled-popup-request") {
-        setGoogleLoading(false);
-      } else {
-        setError("שגיאה בכניסה עם גוגל, נסה שנית");
-        setGoogleLoading(false);
-      }
-    }
+    window.location.href = "/api/auth/google";
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -142,7 +96,7 @@ export default function LoginPage() {
             }}
           >
             {googleLoading ? (
-              <span style={{ color: "#94A3B8" }}>מתחבר...</span>
+              <span style={{ color: "#94A3B8" }}>מעביר לגוגל...</span>
             ) : (
               <>
                 <svg width="20" height="20" viewBox="0 0 48 48">

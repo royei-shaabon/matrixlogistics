@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signInWithCustomToken } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase-client";
 
 const PHONE_REGEX = /^(05\d{8}|\+9725\d{8})$/;
@@ -17,12 +17,30 @@ export default function CompleteRegistrationPage() {
 
   useEffect(() => {
     const auth = getFirebaseAuth();
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!user) { router.push("/login"); return; }
-      setDisplayName(user.displayName || "");
-      setChecking(false);
-    });
-    return () => unsubscribe();
+    let authUnsub: (() => void) | null = null;
+
+    (async () => {
+      // Check for pending server-side Google OAuth user
+      try {
+        const r = await fetch("/api/auth/pending-google");
+        const d = await r.json();
+        if (d.pending && d.customToken) {
+          setDisplayName(d.name || "");
+          await signInWithCustomToken(auth, d.customToken);
+          setChecking(false);
+          return;
+        }
+      } catch { /* fall through */ }
+
+      // Fallback: existing Firebase Auth state (e.g. if user navigates directly)
+      authUnsub = onAuthStateChanged(auth, (user) => {
+        if (!user) { router.push("/login"); return; }
+        setDisplayName(user.displayName || "");
+        setChecking(false);
+      });
+    })();
+
+    return () => { if (authUnsub) authUnsub(); };
   }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {

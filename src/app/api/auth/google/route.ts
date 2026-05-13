@@ -1,6 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb, COLLECTIONS } from "@/lib/firebase-admin";
 import { createSession, setSessionCookie } from "@/lib/auth";
+import crypto from "crypto";
+
+// GET — initiate server-side Google OAuth (works on all browsers including iOS)
+export async function GET(_req: NextRequest) {
+  const state = crypto.randomBytes(16).toString("hex");
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID!,
+    redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback`,
+    response_type: "code",
+    scope: "openid email profile",
+    state,
+    prompt: "select_account",
+  });
+  const res = NextResponse.redirect(
+    `https://accounts.google.com/o/oauth2/v2/auth?${params}`
+  );
+  res.cookies.set("g_state", state, { httpOnly: true, secure: true, maxAge: 300, sameSite: "lax", path: "/" });
+  return res;
+}
 
 export async function POST(req: NextRequest) {
   const { token } = await req.json();
