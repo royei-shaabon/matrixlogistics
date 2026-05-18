@@ -39,22 +39,6 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   if (!isEnvAdmin(session)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const db = getAdminDb();
-
-  // Check if item has orders — if so, deactivate instead of delete
-  const ordersSnap = await db
-    .collection(COLLECTIONS.orderItems)
-    .where("itemId", "==", itemId)
-    .limit(1)
-    .get();
-
-  if (!ordersSnap.empty) {
-    await db.collection(COLLECTIONS.items).doc(itemId).update({
-      isActive: false,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-    return NextResponse.json({ deactivated: true });
-  }
-
   await db.collection(COLLECTIONS.items).doc(itemId).delete();
   return NextResponse.json({ ok: true });
 }
