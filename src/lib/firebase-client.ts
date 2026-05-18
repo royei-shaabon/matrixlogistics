@@ -3,7 +3,7 @@ import { getAuth, Auth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "matrix-logistic-6355c.firebaseapp.com",
+  authDomain: "get-supply.web.app",
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "matrix-logistic-6355c",
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "matrix-logistic-6355c.firebasestorage.app",
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "47448375492",
