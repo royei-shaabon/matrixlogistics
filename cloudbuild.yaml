@@ -23,7 +23,7 @@ steps:
     args:
       - run
       - deploy
-      - "matrix-supply-$_ENV"
+      - "get-supply-$_ENV"
       - "--image=me-west1-docker.pkg.dev/$PROJECT_ID/matrix-supply/app:$_ENV"
       - "--platform=managed"
       - "--region=me-west1"
