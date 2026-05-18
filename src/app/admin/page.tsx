@@ -217,16 +217,16 @@ export default function AdminDashboard() {
             style={{ border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)", opacity: togglingApproval ? 0.6 : 1 }}
           >
             <div className="text-right">
-              <p className="text-sm font-semibold" style={{ color: "#1E293B" }}>אישור הצטרפות</p>
-              <p className="text-xs mt-0.5" style={{ color: requireApproval ? "#64748B" : "#16A34A" }}>
-                {requireApproval ? "חברים חדשים ממתינים לאישורך" : "הצטרפות חופשית — אין צורך באישור"}
+              <p className="text-sm font-semibold" style={{ color: "#1E293B" }}>דרוש אישור מנהל לחברים חדשים</p>
+              <p className="text-xs mt-0.5" style={{ color: requireApproval ? "#16A34A" : "#64748B" }}>
+                {requireApproval ? "מופעל — חברים חדשים ממתינים לאישורך" : "כבוי — הצטרפות חופשית"}
               </p>
             </div>
             <div
               className="flex-shrink-0 relative transition-colors"
               style={{
                 width: "44px", height: "26px", borderRadius: "13px",
-                background: requireApproval ? "#CBD5E1" : "#22C55E",
+                background: requireApproval ? "#22C55E" : "#CBD5E1",
               }}
             >
               <div

@@ -275,11 +275,11 @@ export default function SessionsPage() {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: "#64748B" }}>מתאריך</label>
-                <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} required className="w-full border focus:outline-none focus:ring-2 focus:ring-blue-400" style={{ height: "44px", borderRadius: "12px", borderColor: "#DCE7F3", background: "#F8FAFC", fontSize: "12px", padding: "0 6px", minWidth: 0 }} />
+                <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} required className="w-full border focus:outline-none focus:ring-2 focus:ring-blue-400" style={{ height: "44px", borderRadius: "12px", borderColor: "#DCE7F3", background: "#F8FAFC", fontSize: "14px", padding: "0 6px", minWidth: 0 }} />
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: "#64748B" }}>עד תאריך</label>
-                <input type="datetime-local" value={endAt} onChange={(e) => setEndAt(e.target.value)} required className="w-full border focus:outline-none focus:ring-2 focus:ring-blue-400" style={{ height: "44px", borderRadius: "12px", borderColor: "#DCE7F3", background: "#F8FAFC", fontSize: "12px", padding: "0 6px", minWidth: 0 }} />
+                <input type="datetime-local" value={endAt} onChange={(e) => setEndAt(e.target.value)} required className="w-full border focus:outline-none focus:ring-2 focus:ring-blue-400" style={{ height: "44px", borderRadius: "12px", borderColor: "#DCE7F3", background: "#F8FAFC", fontSize: "14px", padding: "0 6px", minWidth: 0 }} />
               </div>
             </div>
             <button type="submit" disabled={creating || !newName.trim() || !startAt || !endAt} className="w-full text-white font-semibold text-sm transition-all" style={{ height: "44px", borderRadius: "12px", background: creating ? "#93C5FD" : "#3B82F6" }}>

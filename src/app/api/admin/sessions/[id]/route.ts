@@ -44,15 +44,6 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   const doc = await ref.get();
   if (!doc.exists) return NextResponse.json({ error: "לא נמצא" }, { status: 404 });
 
-  const ordersSnap = await db
-    .collection(COLLECTIONS.orders)
-    .where("sectionId", "==", id)
-    .limit(1)
-    .get();
-  if (!ordersSnap.empty) {
-    return NextResponse.json({ error: "לא ניתן למחוק סקשן עם הזמנות קיימות" }, { status: 400 });
-  }
-
   await ref.delete();
   return NextResponse.json({ ok: true });
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb, COLLECTIONS } from "@/lib/firebase-admin";
 import { createSession, setSessionCookie } from "@/lib/auth";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL!;
+const APP_URL = process.env.APP_URL || "https://get-supply.web.app";
 const SUPER_ADMIN_EMAIL = "shaabon.royei@gmail.com";
 
 export async function GET(req: NextRequest) {

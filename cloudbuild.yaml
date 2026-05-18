@@ -3,6 +3,10 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     args:
       - build
+      - --build-arg
+      - NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=get-supply.web.app
+      - --build-arg
+      - NEXT_PUBLIC_APP_URL=https://get-supply.web.app
       - -t
       - "me-west1-docker.pkg.dev/$PROJECT_ID/matrix-supply/app:$_ENV"
       - .
@@ -25,7 +29,7 @@ steps:
       - "--region=me-west1"
       - "--allow-unauthenticated"
       - "--set-secrets=JWT_SECRET=jwt-secret-$_ENV:latest,GOOGLE_CLIENT_SECRET=google-oauth-secret:latest"
-      - "--set-env-vars=NODE_ENV=production"
+      - "--set-env-vars=NODE_ENV=production,NEXT_PUBLIC_APP_URL=https://get-supply.web.app,APP_URL=https://get-supply.web.app"
       - "--min-instances=0"
       - "--memory=512Mi"
 

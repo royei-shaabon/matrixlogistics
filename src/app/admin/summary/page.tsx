@@ -307,7 +307,7 @@ function SummaryPageInner() {
                             <p className="text-xs mt-0.5" style={{ color: "#64748B" }}>{user.phoneNumber || user.email}</p>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: "#DBEAFE", color: "#1D4ED8" }}>{activeItemCount}/{user.items.length}</span>
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full" title="פריטים פעילים / סה״כ פריטים" style={{ background: "#DBEAFE", color: "#1D4ED8" }}>{activeItemCount} / {user.items.length} פריטים</span>
                             <button onClick={(e) => { e.stopPropagation(); handleDelete(user.userId, user.userFullName); }} disabled={deleting === user.userId} className="text-xs px-2.5 py-1 rounded-lg border transition-colors" style={{ color: "#EF4444", borderColor: "#FECACA", background: "transparent", opacity: deleting === user.userId ? 0.4 : 1 }}>
                               {deleting === user.userId ? "..." : "מחק"}
                             </button>

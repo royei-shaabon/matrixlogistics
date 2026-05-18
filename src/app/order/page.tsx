@@ -120,6 +120,9 @@ export default function OrderPage() {
   const categories = [...new Set(items.map((i) => i.category || "כללי"))];
   const totalItems = Object.values(entries).filter((v) => v.quantity && parseInt(v.quantity) > 0).length;
 
+  const isReadOnly = saved || !windowOpen;
+  const hasPreviousOrder = Object.values(entries).some((v) => parseInt(v.quantity || "0") > 0);
+
   return (
     <div className="min-h-screen" style={{ background: "#F9FBFD", paddingBottom: windowOpen && !saved ? "160px" : "80px" }}>
       <div className="px-4 pt-6 pb-4 flex items-start justify-between">
@@ -171,28 +174,31 @@ export default function OrderPage() {
         )}
 
         {windowOpen && saved && (
-          <div className="rounded-[18px] p-8 text-center" style={{ background: "#FFFFFF", border: "1px solid #BBF7D0", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}>
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 mx-auto" style={{ background: "#F0FDF4" }}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
+          <div className="rounded-[18px] px-4 py-3 flex items-center gap-3" style={{ background: "#F0FDF4", border: "1px solid #BBF7D0" }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <div className="flex-1">
+              <span className="text-sm font-semibold" style={{ color: "#15803D" }}>בקשתך הוגשה בהצלחה</span>
+              <span className="text-xs mr-2" style={{ color: "#16A34A" }}>עד {formatDate(section!.endDateTime)}</span>
             </div>
-            <h2 className="text-lg font-bold mb-1" style={{ color: "#15803D" }}>בקשתך הוגשה בהצלחה</h2>
-            <p className="text-sm mb-6" style={{ color: "#64748B" }}>
-              תוכל לערוך אותה עד{" "}
-              <span className="font-semibold" style={{ color: "#1E293B" }}>{formatDate(section!.endDateTime)}</span>
-            </p>
             <button
               onClick={() => setSaved(false)}
-              className="font-semibold text-sm px-6 py-3 rounded-[14px] text-white transition-colors"
-              style={{ background: "#3B82F6" }}
+              className="text-xs font-semibold px-3 py-1.5 rounded-xl transition-colors flex-shrink-0"
+              style={{ background: "#DCFCE7", color: "#15803D" }}
             >
-              ערוך בקשה
+              ערוך
             </button>
           </div>
         )}
 
-        {windowOpen && !saved && items.length > 0 && (
+        {!windowOpen && hasPreviousOrder && (
+          <div className="rounded-[18px] px-4 py-3 flex items-center gap-2" style={{ background: "#F8FAFC", border: "1px solid #DCE7F3" }}>
+            <span className="text-sm" style={{ color: "#64748B" }}>הבקשה האחרונה שלך (לצפייה בלבד)</span>
+          </div>
+        )}
+
+        {items.length > 0 && (windowOpen || hasPreviousOrder) && (
           <>
             {categories.map((cat) => {
               const catItems = items.filter((i) => (i.category || "כללי") === cat);
@@ -210,21 +216,34 @@ export default function OrderPage() {
                             <span className="text-sm font-medium leading-snug flex-1 ml-3" style={{ color: hasValue ? "#1D4ED8" : "#1E293B" }}>{item.name}</span>
                             {hasValue && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: "#DBEAFE", color: "#1D4ED8" }}>{qty}</span>}
                           </div>
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center rounded-xl overflow-hidden flex-shrink-0" style={{ border: "1px solid #DCE7F3", background: "#F8FAFC" }}>
-                              <button type="button" onClick={() => setQty(item.id, -1)} className="flex items-center justify-center text-lg font-light transition-colors" style={{ width: "40px", height: "40px", color: qty === 0 ? "#CBD5E1" : "#64748B" }}>−</button>
-                              <span className="text-sm font-bold text-center" style={{ width: "36px", color: hasValue ? "#1D4ED8" : "#94A3B8" }}>{qty === 0 ? "0" : qty}</span>
-                              <button type="button" onClick={() => setQty(item.id, 1)} className="flex items-center justify-center text-lg transition-colors" style={{ width: "40px", height: "40px", color: "#3B82F6" }}>+</button>
+                          {isReadOnly ? (
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-bold px-4 py-2 rounded-xl flex-shrink-0" style={{ background: "#F1F5F9", color: hasValue ? "#1D4ED8" : "#94A3B8", minWidth: "60px", textAlign: "center" }}>
+                                {qty === 0 ? "—" : qty}
+                              </span>
+                              {entry?.notes && (
+                                <span className="text-sm px-3 py-2 rounded-xl flex-1" style={{ background: "#F8FAFC", color: "#64748B", border: "1px solid #DCE7F3" }}>
+                                  {entry.notes}
+                                </span>
+                              )}
                             </div>
-                            <input
-                              type="text"
-                              value={entry?.notes || ""}
-                              onChange={(e) => setNotes(item.id, e.target.value)}
-                              placeholder="הערה..."
-                              className="flex-1 text-sm px-3 focus:outline-none focus:ring-1 focus:ring-blue-300 transition-shadow"
-                              style={{ height: "40px", borderRadius: "10px", border: "1px solid #DCE7F3", background: "#F8FAFC" }}
-                            />
-                          </div>
+                          ) : (
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center rounded-xl overflow-hidden flex-shrink-0" style={{ border: "1px solid #DCE7F3", background: "#F8FAFC" }}>
+                                <button type="button" onClick={() => setQty(item.id, -1)} className="flex items-center justify-center text-lg font-light transition-colors" style={{ width: "40px", height: "40px", color: qty === 0 ? "#CBD5E1" : "#64748B" }}>−</button>
+                                <span className="text-sm font-bold text-center" style={{ width: "36px", color: hasValue ? "#1D4ED8" : "#94A3B8" }}>{qty === 0 ? "0" : qty}</span>
+                                <button type="button" onClick={() => setQty(item.id, 1)} className="flex items-center justify-center text-lg transition-colors" style={{ width: "40px", height: "40px", color: "#3B82F6" }}>+</button>
+                              </div>
+                              <input
+                                type="text"
+                                value={entry?.notes || ""}
+                                onChange={(e) => setNotes(item.id, e.target.value)}
+                                placeholder="הערה..."
+                                className="flex-1 text-sm px-3 focus:outline-none focus:ring-1 focus:ring-blue-300 transition-shadow"
+                                style={{ height: "40px", borderRadius: "10px", border: "1px solid #DCE7F3", background: "#F8FAFC" }}
+                              />
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -232,12 +251,6 @@ export default function OrderPage() {
                 </div>
               );
             })}
-
-            {items.length === 0 && (
-              <div className="rounded-[18px] p-8 text-center text-sm" style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", color: "#94A3B8" }}>
-                לא הוגדרו פריטים לסביבה זו
-              </div>
-            )}
 
             {error && (
               <div className="rounded-xl px-4 py-3 text-sm font-medium" style={{ background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA" }}>{error}</div>
