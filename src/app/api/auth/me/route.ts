@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession, createSession, setSessionCookie } from "@/lib/auth";
+import { getSession, createSession, setSessionCookie, clearSessionCookie } from "@/lib/auth";
 import { getAdminDb, COLLECTIONS } from "@/lib/firebase-admin";
 
 export async function GET() {
@@ -13,6 +13,8 @@ export async function GET() {
   const data = doc.data()!;
   const globalRole = data.globalRole || "user";
   const globalStatus = data.globalStatus || "active";
+
+  if (globalStatus === "blocked") return clearSessionCookie(NextResponse.json({ user: null }));
 
   let environmentRole = session.environmentRole;
   let environmentStatus = session.environmentStatus;

@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   }
 
   const uid = decoded.uid;
-  const email = decoded.email || "";
+  const email = (decoded.email || "").toLowerCase().trim();
 
   const existing = await db.collection(COLLECTIONS.users).doc(uid).get();
   if (existing.exists) {

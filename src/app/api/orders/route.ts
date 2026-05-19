@@ -54,6 +54,10 @@ export async function POST(req: NextRequest) {
 
   const envId = session.currentEnvironmentId;
 
+  if (session.globalStatus === "blocked") {
+    return NextResponse.json({ error: "המשתמש חסום" }, { status: 403 });
+  }
+
   // Must be approved in environment (admins can also submit)
   if (!isEnvAdmin(session) && session.environmentStatus !== "approved") {
     return NextResponse.json({ error: "המשתמש לא מאושר" }, { status: 403 });
@@ -69,6 +73,7 @@ export async function POST(req: NextRequest) {
   }
 
   const userDoc = await db.collection(COLLECTIONS.users).doc(session.userId).get();
+  if (!userDoc.exists) return NextResponse.json({ error: "משתמש לא נמצא" }, { status: 404 });
   const userData = userDoc.data()!;
 
   const body = await req.json();
@@ -102,10 +107,6 @@ export async function POST(req: NextRequest) {
     orderId = orderRef.id;
   }
 
-  // Replace all order items
-  const existingItems = await db.collection(COLLECTIONS.orderItems).where("orderId", "==", orderId).get();
-  await Promise.all(existingItems.docs.map((d) => d.ref.delete()));
-
   // Fetch item names from Firestore
   const itemIds = items.filter((i) => i.quantity > 0).map((i) => i.itemId);
   const itemDocs = itemIds.length > 0
@@ -114,23 +115,27 @@ export async function POST(req: NextRequest) {
   const itemMap: Record<string, string> = {};
   itemDocs.forEach((d) => { if (d.exists) itemMap[d.id] = d.data()!.name; });
 
-  const addOps = items
-    .filter((item) => item.quantity > 0)
-    .map((item) =>
-      db.collection(COLLECTIONS.orderItems).add({
-        environmentId: envId,
-        sectionId: section.id,
-        orderId,
-        itemId: item.itemId,
-        itemNameSnapshot: itemMap[item.itemId] || item.itemId,
-        quantity: item.quantity,
-        note: item.notes || "",
-        status: "active",
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      })
-    );
-  await Promise.all(addOps);
+  // Replace all order items atomically
+  const existingItems = await db.collection(COLLECTIONS.orderItems).where("orderId", "==", orderId).get();
+  const newItems = items.filter((item) => item.quantity > 0);
+  const batch = db.batch();
+  existingItems.docs.forEach((d) => batch.delete(d.ref));
+  newItems.forEach((item) => {
+    const ref = db.collection(COLLECTIONS.orderItems).doc();
+    batch.set(ref, {
+      environmentId: envId,
+      sectionId: section.id,
+      orderId,
+      itemId: item.itemId,
+      itemNameSnapshot: itemMap[item.itemId] || item.itemId,
+      quantity: item.quantity,
+      note: item.notes || "",
+      status: "active",
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  });
+  await batch.commit();
 
   return NextResponse.json({ ok: true });
 }

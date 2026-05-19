@@ -21,6 +21,7 @@ interface GlobalUser {
   id: string;
   email: string;
   fullName: string;
+  phoneNumber?: string;
   globalRole: string;
   globalStatus: string;
   createdAt?: string;
@@ -38,6 +39,7 @@ export default function SuperAdminPage() {
   const [users, setUsers] = useState<GlobalUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"envs" | "users">("envs");
+  const [meEmail, setMeEmail] = useState("");
 
   // Env actions
   const [entering, setEntering] = useState<string | null>(null);
@@ -50,6 +52,19 @@ export default function SuperAdminPage() {
 
   // User actions
   const [updatingUser, setUpdatingUser] = useState<string | null>(null);
+  const [deletingUser, setDeletingUser] = useState<string | null>(null);
+  const [editUser, setEditUser] = useState<GlobalUser | null>(null);
+  const [editUserName, setEditUserName] = useState("");
+  const [editUserPhone, setEditUserPhone] = useState("");
+  const [editUserRole, setEditUserRole] = useState("user");
+  const [editUserSaving, setEditUserSaving] = useState(false);
+
+  // Clone modal
+  const [cloneEnv, setCloneEnv] = useState<Environment | null>(null);
+  const [cloneName, setCloneName] = useState("");
+  const [cloneIncludeUsers, setCloneIncludeUsers] = useState(false);
+  const [cloning, setCloning] = useState(false);
+  const [cloneResult, setCloneResult] = useState<{ itemCount: number; memberCount: number } | null>(null);
 
   // Env filter
   const [envFilter, setEnvFilter] = useState<"all" | "pending" | "active" | "rejected">("all");
@@ -57,6 +72,7 @@ export default function SuperAdminPage() {
   useEffect(() => {
     fetch("/api/auth/me").then((r) => r.json()).then((d) => {
       if (!d.user || d.user.globalRole !== "super_admin") { router.push("/"); return; }
+      setMeEmail(d.user.email || "");
     });
     loadAll();
   }, [router]);
@@ -73,21 +89,23 @@ export default function SuperAdminPage() {
 
   async function handleEnvStatus(id: string, status: string) {
     setUpdating(id);
-    await fetch(`/api/environments/${id}`, {
+    const res = await fetch(`/api/environments/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
-    setEnvs((prev) => prev.map((e) => e.id === id ? { ...e, status } : e));
     setUpdating(null);
+    if (!res.ok) { const d = await res.json(); alert(d.error || "שגיאה בעדכון"); return; }
+    setEnvs((prev) => prev.map((e) => e.id === id ? { ...e, status } : e));
   }
 
   async function handleDeleteEnv(env: Environment) {
     if (!confirm(`למחוק את הסביבה "${env.name}"? כל החברים יוסרו. פעולה זו אינה הפיכה.`)) return;
     setDeletingEnv(env.id);
-    await fetch(`/api/environments/${env.id}`, { method: "DELETE" });
-    setEnvs((prev) => prev.filter((e) => e.id !== env.id));
+    const res = await fetch(`/api/environments/${env.id}`, { method: "DELETE" });
     setDeletingEnv(null);
+    if (!res.ok) { const d = await res.json(); alert(d.error || "שגיאה במחיקה"); return; }
+    setEnvs((prev) => prev.filter((e) => e.id !== env.id));
   }
 
   async function handleEnterEnv(id: string) {
@@ -95,7 +113,8 @@ export default function SuperAdminPage() {
     const res = await fetch(`/api/environments/${id}/enter`, { method: "POST" });
     const data = await res.json();
     setEntering(null);
-    if (res.ok) router.push(data.redirect || "/admin");
+    if (!res.ok) { alert(data.error || "שגיאה בכניסה לסביבה"); return; }
+    router.push(data.redirect || "/admin");
   }
 
   function openEditEnv(env: Environment) {
@@ -107,27 +126,85 @@ export default function SuperAdminPage() {
   async function handleSaveEnv() {
     if (!editEnv) return;
     setEditSaving(true);
-    await fetch(`/api/environments/${editEnv.id}`, {
+    const res = await fetch(`/api/environments/${editEnv.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: editName, description: editDesc }),
     });
-    setEnvs((prev) => prev.map((e) => e.id === editEnv.id ? { ...e, name: editName, description: editDesc } : e));
     setEditSaving(false);
+    if (!res.ok) { const d = await res.json(); alert(d.error || "שגיאה בשמירה"); return; }
+    setEnvs((prev) => prev.map((e) => e.id === editEnv.id ? { ...e, name: editName, description: editDesc } : e));
     setEditEnv(null);
+  }
+
+  function openEditUser(user: GlobalUser) {
+    setEditUserName(user.fullName || "");
+    setEditUserPhone(user.phoneNumber || "");
+    setEditUserRole(user.globalRole || "user");
+    setEditUser(user);
+  }
+
+  async function handleSaveUser() {
+    if (!editUser) return;
+    setEditUserSaving(true);
+    const res = await fetch(`/api/users/${editUser.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fullName: editUserName.trim(), phoneNumber: editUserPhone.trim(), globalRole: editUserRole }),
+    });
+    setEditUserSaving(false);
+    if (!res.ok) { const d = await res.json(); alert(d.error || "שגיאה בשמירה"); return; }
+    setUsers((prev) => prev.map((u) => u.id === editUser.id
+      ? { ...u, fullName: editUserName.trim(), phoneNumber: editUserPhone.trim(), globalRole: editUserRole }
+      : u
+    ));
+    setEditUser(null);
+  }
+
+  async function handleDeleteUser(user: GlobalUser) {
+    if (!confirm(`למחוק את המשתמש "${user.fullName || user.email}"?\nפעולה זו אינה הפיכה.`)) return;
+    setDeletingUser(user.id);
+    const res = await fetch(`/api/users/${user.id}`, { method: "DELETE" });
+    setDeletingUser(null);
+    if (!res.ok) { const d = await res.json(); alert(d.error || "שגיאה במחיקה"); return; }
+    setUsers((prev) => prev.filter((u) => u.id !== user.id));
   }
 
   async function handleToggleUserBlock(user: GlobalUser) {
     const newStatus = user.globalStatus === "blocked" ? "active" : "blocked";
     if (newStatus === "blocked" && !confirm(`לחסום את ${user.fullName || user.email}?`)) return;
     setUpdatingUser(user.id);
-    await fetch(`/api/users/${user.id}`, {
+    const res = await fetch(`/api/users/${user.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ globalStatus: newStatus }),
     });
-    setUsers((prev) => prev.map((u) => u.id === user.id ? { ...u, globalStatus: newStatus } : u));
     setUpdatingUser(null);
+    if (!res.ok) { const d = await res.json(); alert(d.error || "שגיאה בעדכון"); return; }
+    setUsers((prev) => prev.map((u) => u.id === user.id ? { ...u, globalStatus: newStatus } : u));
+  }
+
+  function openClone(env: Environment) {
+    setCloneName(`${env.name} - עותק`);
+    setCloneIncludeUsers(false);
+    setCloneResult(null);
+    setCloneEnv(env);
+  }
+
+  async function handleClone() {
+    if (!cloneEnv || !cloneName.trim()) return;
+    setCloning(true);
+    setCloneResult(null);
+    const res = await fetch(`/api/environments/${cloneEnv.id}/clone`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: cloneName.trim(), includeUsers: cloneIncludeUsers }),
+    });
+    const data = await res.json();
+    setCloning(false);
+    if (!res.ok) { alert(data.error || "שגיאה בשכפול"); return; }
+    setCloneResult({ itemCount: data.itemCount, memberCount: data.memberCount });
+    await loadAll();
   }
 
   async function handleLogout() {
@@ -333,6 +410,13 @@ export default function SuperAdminPage() {
                             ערוך
                           </button>
                           <button
+                            onClick={() => openClone(env)}
+                            className="text-xs font-medium px-3 transition-all"
+                            style={{ height: "32px", borderRadius: "8px", background: "#1E293B", color: "#60A5FA", border: "1px solid #1D4ED8" }}
+                          >
+                            שכפל
+                          </button>
+                          <button
                             onClick={() => handleDeleteEnv(env)}
                             disabled={isDeleting}
                             className="text-xs font-medium px-3 transition-all"
@@ -364,14 +448,14 @@ export default function SuperAdminPage() {
                 ) : (
                   users.map((user) => {
                     const isBlocked = user.globalStatus === "blocked";
-                    const isSelf = user.email === "shaabon.royei@gmail.com";
+                    const isSelf = user.email === meEmail;
                     return (
                       <div
                         key={user.id}
                         className="rounded-[18px] p-4"
                         style={{ background: isBlocked ? "#1C0A0A" : "#1E293B", border: `1px solid ${isBlocked ? "#7F1D1D" : "#334155"}` }}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-start gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap mb-0.5">
                               <span className="font-semibold text-sm truncate" style={{ color: "#F1F5F9" }}>
@@ -386,22 +470,41 @@ export default function SuperAdminPage() {
                             </div>
                             <p className="text-xs truncate" style={{ color: "#475569" }}>{user.email}</p>
                           </div>
-                          {!isSelf && (
+                          <div className="flex gap-2 flex-shrink-0">
                             <button
-                              onClick={() => handleToggleUserBlock(user)}
-                              disabled={updatingUser === user.id}
-                              className="flex-shrink-0 text-xs font-semibold px-3 transition-all"
-                              style={{
-                                height: "32px", borderRadius: "8px",
-                                background: isBlocked ? "#14532D" : "#450A0A",
-                                color: isBlocked ? "#86EFAC" : "#FCA5A5",
-                                border: `1px solid ${isBlocked ? "#166534" : "#7F1D1D"}`,
-                                opacity: updatingUser === user.id ? 0.6 : 1,
-                              }}
+                              onClick={() => openEditUser(user)}
+                              className="text-xs font-medium px-3 transition-all"
+                              style={{ height: "32px", borderRadius: "8px", background: "#1E293B", color: "#94A3B8", border: "1px solid #334155" }}
                             >
-                              {updatingUser === user.id ? "..." : isBlocked ? "בטל חסימה" : "חסום"}
+                              ערוך
                             </button>
-                          )}
+                            {!isSelf && (
+                              <>
+                                <button
+                                  onClick={() => handleToggleUserBlock(user)}
+                                  disabled={updatingUser === user.id}
+                                  className="text-xs font-semibold px-3 transition-all"
+                                  style={{
+                                    height: "32px", borderRadius: "8px",
+                                    background: isBlocked ? "#14532D" : "#450A0A",
+                                    color: isBlocked ? "#86EFAC" : "#FCA5A5",
+                                    border: `1px solid ${isBlocked ? "#166534" : "#7F1D1D"}`,
+                                    opacity: updatingUser === user.id ? 0.6 : 1,
+                                  }}
+                                >
+                                  {updatingUser === user.id ? "..." : isBlocked ? "בטל חסימה" : "חסום"}
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteUser(user)}
+                                  disabled={deletingUser === user.id}
+                                  className="text-xs font-medium px-3 transition-all"
+                                  style={{ height: "32px", borderRadius: "8px", background: "#450A0A", color: "#FCA5A5", border: "1px solid #7F1D1D", opacity: deletingUser === user.id ? 0.6 : 1 }}
+                                >
+                                  {deletingUser === user.id ? "..." : "מחק"}
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
@@ -412,6 +515,150 @@ export default function SuperAdminPage() {
           </>
         )}
       </div>
+
+      {/* Clone environment modal */}
+      {cloneEnv && (
+        <div className="fixed inset-0 z-[60] flex items-end" style={{ background: "rgba(0,0,0,0.7)" }} onClick={() => setCloneEnv(null)}>
+          <div className="w-full rounded-t-[24px] p-5" style={{ background: "#1E293B", maxHeight: "80vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-center mb-4"><div className="w-10 h-1 rounded-full" style={{ background: "#334155" }} /></div>
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-base font-bold" style={{ color: "#F1F5F9" }}>שכפול סביבה</h2>
+              <button onClick={() => setCloneEnv(null)} style={{ color: "#64748B", fontSize: "20px", lineHeight: 1 }}>✕</button>
+            </div>
+            <p className="text-xs mb-5" style={{ color: "#475569" }}>
+              מקור: <span style={{ color: "#94A3B8" }}>{cloneEnv.name}</span>
+            </p>
+            {cloneResult ? (
+              <div className="rounded-[14px] p-5 text-center space-y-2" style={{ background: "#0F2A1A", border: "1px solid #166534" }}>
+                <p className="text-lg font-bold" style={{ color: "#4ADE80" }}>✓ הסביבה שוכפלה בהצלחה</p>
+                <p className="text-sm" style={{ color: "#86EFAC" }}>
+                  {cloneResult.itemCount} פריטים
+                  {cloneResult.memberCount > 0 ? ` · ${cloneResult.memberCount} חברים` : ""}
+                </p>
+                <button
+                  onClick={() => setCloneEnv(null)}
+                  className="mt-3 text-sm font-semibold px-6 py-2 rounded-xl text-white"
+                  style={{ background: "#16A34A" }}
+                >
+                  סגור
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: "#64748B" }}>שם הסביבה החדשה</label>
+                  <input
+                    type="text"
+                    value={cloneName}
+                    onChange={(e) => setCloneName(e.target.value)}
+                    className="w-full px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={{ height: "48px", borderRadius: "12px", border: "1px solid #334155", background: "#0F172A", color: "#F1F5F9" }}
+                  />
+                </div>
+                <label
+                  className="flex items-center gap-3 p-4 rounded-[14px] cursor-pointer"
+                  style={{ border: `1px solid ${cloneIncludeUsers ? "#1D4ED8" : "#334155"}`, background: cloneIncludeUsers ? "#1E3A5F" : "#0F172A" }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={cloneIncludeUsers}
+                    onChange={(e) => setCloneIncludeUsers(e.target.checked)}
+                    className="w-4 h-4 accent-blue-500"
+                  />
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: "#F1F5F9" }}>שכפל גם את המשתמשים</p>
+                    <p className="text-xs mt-0.5" style={{ color: "#475569" }}>
+                      {cloneEnv.memberCount ? `${cloneEnv.memberCount} חברים מאושרים יועברו` : "כל החברים המאושרים יועברו"}
+                    </p>
+                  </div>
+                </label>
+                <div className="flex gap-3 pt-1">
+                  <button
+                    onClick={handleClone}
+                    disabled={cloning || !cloneName.trim()}
+                    className="flex-1 text-white font-semibold text-sm transition-all"
+                    style={{ height: "50px", borderRadius: "14px", background: cloning || !cloneName.trim() ? "#1D4ED8" : "#3B82F6", opacity: cloning ? 0.7 : 1 }}
+                  >
+                    {cloning ? "משכפל..." : "שכפל סביבה"}
+                  </button>
+                  <button
+                    onClick={() => setCloneEnv(null)}
+                    className="flex-1 font-semibold text-sm transition-all"
+                    style={{ height: "50px", borderRadius: "14px", border: "1px solid #334155", color: "#64748B", background: "#0F172A" }}
+                  >
+                    ביטול
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit user modal */}
+      {editUser && (
+        <div className="fixed inset-0 z-[60] flex items-end" style={{ background: "rgba(0,0,0,0.7)" }} onClick={() => setEditUser(null)}>
+          <div className="w-full rounded-t-[24px] p-5" style={{ background: "#1E293B", maxHeight: "80vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-center mb-4"><div className="w-10 h-1 rounded-full" style={{ background: "#334155" }} /></div>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base font-bold" style={{ color: "#F1F5F9" }}>עריכת משתמש</h2>
+              <button onClick={() => setEditUser(null)} style={{ color: "#64748B", fontSize: "20px", lineHeight: 1 }}>✕</button>
+            </div>
+            <p className="text-xs mb-4 truncate" style={{ color: "#475569" }}>{editUser.email}</p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "#64748B" }}>שם מלא</label>
+                <input
+                  type="text"
+                  value={editUserName}
+                  onChange={(e) => setEditUserName(e.target.value)}
+                  className="w-full px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{ height: "48px", borderRadius: "12px", border: "1px solid #334155", background: "#0F172A", color: "#F1F5F9" }}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "#64748B" }}>טלפון</label>
+                <input
+                  type="text"
+                  value={editUserPhone}
+                  onChange={(e) => setEditUserPhone(e.target.value)}
+                  className="w-full px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{ height: "48px", borderRadius: "12px", border: "1px solid #334155", background: "#0F172A", color: "#F1F5F9" }}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "#64748B" }}>תפקיד גלובלי</label>
+                <select
+                  value={editUserRole}
+                  onChange={(e) => setEditUserRole(e.target.value)}
+                  className="w-full px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{ height: "48px", borderRadius: "12px", border: "1px solid #334155", background: "#0F172A", color: "#F1F5F9" }}
+                >
+                  <option value="user">משתמש רגיל</option>
+                  <option value="super_admin">Super Admin</option>
+                </select>
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={handleSaveUser}
+                  disabled={editUserSaving || !editUserName.trim()}
+                  className="flex-1 text-white font-semibold text-sm transition-all"
+                  style={{ height: "50px", borderRadius: "14px", background: editUserSaving ? "#1D4ED8" : "#3B82F6", opacity: editUserSaving ? 0.7 : 1 }}
+                >
+                  {editUserSaving ? "שומר..." : "שמור"}
+                </button>
+                <button
+                  onClick={() => setEditUser(null)}
+                  className="flex-1 font-semibold text-sm transition-all"
+                  style={{ height: "50px", borderRadius: "14px", border: "1px solid #334155", color: "#64748B", background: "#0F172A" }}
+                >
+                  ביטול
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit environment modal */}
       {editEnv && (

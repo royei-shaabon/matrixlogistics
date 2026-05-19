@@ -9,12 +9,18 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
+  if (session.globalRole !== "super_admin" && session.currentEnvironmentId !== id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const db = getAdminDb();
+  const isAdmin = isEnvAdmin(session);
 
   const snap = await db.collection(COLLECTIONS.items).where("environmentId", "==", id).get();
 
   const items = snap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((item: Record<string, unknown>) => isAdmin || item.isActive !== false)
     .sort((a: Record<string, unknown>, b: Record<string, unknown>) =>
       ((a.sortOrder as number) ?? 0) - ((b.sortOrder as number) ?? 0)
     );

@@ -15,6 +15,13 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const body = await req.json();
   const db = getAdminDb();
 
+  // Verify this order item belongs to the admin's current environment
+  const itemDoc = await db.collection(COLLECTIONS.orderItems).doc(id).get();
+  if (!itemDoc.exists) return NextResponse.json({ error: "לא נמצא" }, { status: 404 });
+  if (session.globalRole !== "super_admin" && itemDoc.data()!.environmentId !== session.currentEnvironmentId) {
+    return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
+  }
+
   const update: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
   if (body.status === "blocked" || body.status === "active") update.status = body.status;
   if (typeof body.quantity === "number" && body.quantity > 0) update.quantity = body.quantity;
@@ -35,6 +42,14 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 
   const { id } = await params;
   const db = getAdminDb();
+
+  // Verify this order item belongs to the admin's current environment
+  const itemDoc = await db.collection(COLLECTIONS.orderItems).doc(id).get();
+  if (!itemDoc.exists) return NextResponse.json({ error: "לא נמצא" }, { status: 404 });
+  if (session.globalRole !== "super_admin" && itemDoc.data()!.environmentId !== session.currentEnvironmentId) {
+    return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
+  }
+
   await db.collection(COLLECTIONS.orderItems).doc(id).delete();
   return NextResponse.json({ ok: true });
 }

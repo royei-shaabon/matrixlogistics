@@ -17,6 +17,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // Find member record
   const memberId = body.memberId;
   if (memberId) {
+    const memberDoc = await db.collection(COLLECTIONS.environmentMembers).doc(memberId).get();
+    if (!memberDoc.exists) return NextResponse.json({ error: "לא נמצא" }, { status: 404 });
+    if (session.globalRole !== "super_admin" && memberDoc.data()!.environmentId !== session.currentEnvironmentId) {
+      return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
+    }
     await db.collection(COLLECTIONS.environmentMembers).doc(memberId).update({
       status: "approved",
       updatedAt: FieldValue.serverTimestamp(),

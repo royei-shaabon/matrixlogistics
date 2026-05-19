@@ -125,6 +125,13 @@ export default function EnvironmentsPage() {
               ? memberStatusLabel(env.memberStatus)
               : null;
             const canEnter = (!envPending || isEnvAdmin) && (!env.memberStatus || env.memberStatus === "approved");
+            const disabledReason = !canEnter
+              ? env.memberStatus === "pending"
+                ? "ממתין לאישור מנהל הסביבה"
+                : envPending
+                ? "הסביבה ממתינה לאישור מנהל ראשי"
+                : "גישה חסומה"
+              : undefined;
             return (
               <div
                 key={env.id}
@@ -147,16 +154,18 @@ export default function EnvironmentsPage() {
                   )}
                 </div>
                 <button
-                  onClick={() => handleEnter(env.id)}
+                  onClick={() => canEnter ? handleEnter(env.id) : undefined}
                   disabled={entering === env.id || !canEnter}
+                  title={disabledReason}
                   className="flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-xl transition-all"
                   style={{
                     background: canEnter ? "#3B82F6" : "#F1F5F9",
                     color: canEnter ? "#FFFFFF" : "#94A3B8",
                     opacity: entering === env.id ? 0.7 : 1,
+                    cursor: canEnter ? "pointer" : "not-allowed",
                   }}
                 >
-                  {entering === env.id ? "..." : "כניסה"}
+                  {entering === env.id ? "..." : !canEnter && env.memberStatus === "pending" ? "ממתין" : "כניסה"}
                 </button>
               </div>
             );
@@ -164,35 +173,43 @@ export default function EnvironmentsPage() {
         )}
 
         {/* Actions */}
-        <div className="grid grid-cols-2 gap-3 pt-2">
+        <div className="flex flex-col gap-3 pt-2">
           <Link
             href="/environments/create"
-            className="rounded-[18px] p-4 bg-white flex flex-col items-center gap-2 border transition-all"
+            className="rounded-[18px] p-4 bg-white flex items-center gap-3 border transition-all"
             style={{ border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}
           >
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl font-light" style={{ background: "#EFF6FF", color: "#3B82F6" }}>+</div>
-            <span className="text-sm font-semibold" style={{ color: "#1E293B" }}>צור סביבה</span>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl font-light flex-shrink-0" style={{ background: "#EFF6FF", color: "#3B82F6" }}>+</div>
+            <div>
+              <span className="text-sm font-semibold block" style={{ color: "#1E293B" }}>צור סביבה חדשה</span>
+              <span className="text-xs" style={{ color: "#64748B" }}>הקם סביבת הגשה לקבוצה שלך</span>
+            </div>
           </Link>
 
           <div
-            className="rounded-[18px] p-4 bg-white flex flex-col items-center gap-2"
+            className="rounded-[18px] p-4 bg-white"
             style={{ border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}
           >
-            <input
-              type="text"
-              value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value)}
-              placeholder="קוד הזמנה"
-              className="w-full text-center text-sm border px-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-              style={{ height: "40px", borderRadius: "10px", borderColor: "#DCE7F3", background: "#F8FAFC" }}
-            />
-            <button
-              onClick={handleJoinByCode}
-              className="w-full text-sm font-semibold py-2 rounded-xl text-white transition-all"
-              style={{ background: inviteCode.trim() ? "#3B82F6" : "#CBD5E1" }}
-            >
-              הצטרף
-            </button>
+            <p className="text-xs font-semibold mb-2.5" style={{ color: "#64748B" }}>הצטרף עם קוד הזמנה</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleJoinByCode()}
+                placeholder="הזן קוד הזמנה..."
+                className="flex-1 text-sm border px-3 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                style={{ height: "42px", borderRadius: "10px", borderColor: "#DCE7F3", background: "#F8FAFC" }}
+              />
+              <button
+                onClick={handleJoinByCode}
+                disabled={!inviteCode.trim()}
+                className="text-sm font-semibold px-4 rounded-xl text-white transition-all flex-shrink-0"
+                style={{ height: "42px", background: inviteCode.trim() ? "#3B82F6" : "#CBD5E1", cursor: inviteCode.trim() ? "pointer" : "not-allowed" }}
+              >
+                הצטרף
+              </button>
+            </div>
           </div>
         </div>
 

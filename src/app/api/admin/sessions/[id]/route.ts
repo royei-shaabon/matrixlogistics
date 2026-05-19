@@ -17,6 +17,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const ref = db.collection(COLLECTIONS.sections).doc(id);
   const doc = await ref.get();
   if (!doc.exists) return NextResponse.json({ error: "לא נמצא" }, { status: 404 });
+  if (session.globalRole !== "super_admin" && doc.data()!.environmentId !== session.currentEnvironmentId) {
+    return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
+  }
 
   if (body.close) {
     await ref.update({ status: "closed", updatedAt: FieldValue.serverTimestamp() });
@@ -43,6 +46,9 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   const ref = db.collection(COLLECTIONS.sections).doc(id);
   const doc = await ref.get();
   if (!doc.exists) return NextResponse.json({ error: "לא נמצא" }, { status: 404 });
+  if (session.globalRole !== "super_admin" && doc.data()!.environmentId !== session.currentEnvironmentId) {
+    return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
+  }
 
   await ref.delete();
   return NextResponse.json({ ok: true });

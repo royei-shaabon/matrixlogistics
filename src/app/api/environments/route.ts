@@ -14,12 +14,8 @@ export async function GET() {
   const db = getAdminDb();
 
   if (session.globalRole === "super_admin") {
-    const snap = await db.collection(COLLECTIONS.environments).get();
-    const envDocs = snap.docs.sort((a, b) => {
-      const at = (a.data().createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0;
-      const bt = (b.data().createdAt as { toMillis?: () => number })?.toMillis?.() ?? 0;
-      return bt - at;
-    });
+    const snap = await db.collection(COLLECTIONS.environments).orderBy("createdAt", "desc").limit(200).get();
+    const envDocs = snap.docs;
 
     // Fetch owner user names, member counts, order counts in parallel per env
     const enriched = await Promise.all(
