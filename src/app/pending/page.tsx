@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 export default function PendingPage() {
   const router = useRouter();
   const [envName, setEnvName] = useState("");
+  const [checking, setChecking] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -20,6 +21,14 @@ export default function PendingPage() {
         }
       });
   }, [router]);
+
+  async function handleCheck() {
+    setChecking(true);
+    const d = await fetch("/api/auth/me").then((r) => r.json());
+    setChecking(false);
+    if (!d.user) { router.push("/login"); return; }
+    if (d.user.environmentStatus === "approved") { router.push("/"); return; }
+  }
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -46,6 +55,14 @@ export default function PendingPage() {
             בקשת הצטרפותך נשמרה. המנהל יאשר את גישתך בהקדם.
           </p>
           <div className="flex flex-col gap-2 mt-8">
+            <button
+              onClick={handleCheck}
+              disabled={checking}
+              className="text-sm font-semibold py-2.5 rounded-xl text-white transition-all"
+              style={{ background: checking ? "#93C5FD" : "#3B82F6" }}
+            >
+              {checking ? "בודק..." : "בדוק שוב"}
+            </button>
             <button
               onClick={() => router.push("/environments")}
               className="text-sm font-semibold py-2.5 rounded-xl transition-all"

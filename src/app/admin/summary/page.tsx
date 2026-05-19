@@ -132,7 +132,7 @@ function SummaryPageInner() {
   async function handleDelete(userId: string, userName: string) {
     if (!confirm(`למחוק את כל ההזמנה של ${userName}?`)) return;
     setDeleting(userId);
-    const res = await fetch(`/api/orders/${userId}`, { method: "DELETE" });
+    const res = await fetch(`/api/orders/${userId}?sectionId=${selectedSectionId}`, { method: "DELETE" });
     if (res.ok) {
       setExpanded((prev) => { const next = new Set(prev); next.delete(userId); return next; });
       await loadData(selectedSectionId);

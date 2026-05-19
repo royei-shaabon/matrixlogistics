@@ -8,11 +8,21 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
+  if (session.globalRole !== "super_admin" && session.currentEnvironmentId !== id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const db = getAdminDb();
   const doc = await db.collection(COLLECTIONS.environments).doc(id).get();
   if (!doc.exists) return NextResponse.json({ error: "לא נמצא" }, { status: 404 });
 
-  return NextResponse.json({ id: doc.id, ...doc.data() });
+  const data = doc.data()!;
+  // Never expose inviteCode to non-super-admins
+  if (session.globalRole !== "super_admin") {
+    delete (data as Record<string, unknown>).inviteCode;
+  }
+
+  return NextResponse.json({ id: doc.id, ...data });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

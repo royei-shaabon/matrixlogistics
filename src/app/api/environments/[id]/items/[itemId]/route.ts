@@ -21,6 +21,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if (body.unit !== undefined) update.unit = body.unit.trim();
   if (body.category !== undefined) update.category = body.category.trim();
   if (body.isActive !== undefined) update.isActive = body.isActive;
+  if (body.status !== undefined) update.status = body.status;
   if (body.sortOrder !== undefined) update.sortOrder = body.sortOrder;
 
   const db = getAdminDb();

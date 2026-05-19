@@ -3,27 +3,32 @@ import { getSession, isEnvAdmin } from "@/lib/auth";
 import { getAdminDb, COLLECTIONS } from "@/lib/firebase-admin";
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
   const session = await getSession();
-  if (!session || !isEnvAdmin(session)) {
+  if (!session || !isEnvAdmin(session) || !session.currentEnvironmentId) {
     return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
   }
 
   const { userId } = await params;
+  const sectionId = new URL(req.url).searchParams.get("sectionId");
+  if (!sectionId) return NextResponse.json({ error: "sectionId נדרש" }, { status: 400 });
+
   const db = getAdminDb();
 
-  // Get current window
-  const windowDoc = await db.collection(COLLECTIONS.orderWindow).doc("current").get();
-  if (!windowDoc.exists) return NextResponse.json({ error: "אין חלון הזמנה" }, { status: 400 });
-  const windowId = windowDoc.data()!.windowId;
+  // Verify section belongs to admin's environment
+  const sectionDoc = await db.collection(COLLECTIONS.sections).doc(sectionId).get();
+  if (!sectionDoc.exists || sectionDoc.data()?.environmentId !== session.currentEnvironmentId) {
+    return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
+  }
 
-  // Find the user's order for this window
   const ordersSnap = await db
     .collection(COLLECTIONS.orders)
     .where("userId", "==", userId)
-    .where("windowId", "==", windowId)
+    .where("sectionId", "==", sectionId)
+    .where("environmentId", "==", session.currentEnvironmentId)
+    .limit(1)
     .get();
 
   if (ordersSnap.empty) {
@@ -31,17 +36,12 @@ export async function DELETE(
   }
 
   const orderId = ordersSnap.docs[0].id;
+  const itemsSnap = await db.collection(COLLECTIONS.orderItems).where("orderId", "==", orderId).get();
 
-  // Delete all order items
-  const itemsSnap = await db
-    .collection(COLLECTIONS.orderItems)
-    .where("orderId", "==", orderId)
-    .get();
-
-  await Promise.all([
-    ...itemsSnap.docs.map((d) => d.ref.delete()),
-    ordersSnap.docs[0].ref.delete(),
-  ]);
+  const batch = db.batch();
+  itemsSnap.docs.forEach((d) => batch.delete(d.ref));
+  batch.delete(ordersSnap.docs[0].ref);
+  await batch.commit();
 
   return NextResponse.json({ ok: true });
 }

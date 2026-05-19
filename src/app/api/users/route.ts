@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSession, isEnvAdmin } from "@/lib/auth";
 import { getAdminDb, COLLECTIONS } from "@/lib/firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 
 // GET — list members of current environment (env admins see their env, super_admin sees all)
 export async function GET() {
@@ -62,4 +63,55 @@ export async function GET() {
   });
 
   return NextResponse.json({ users });
+}
+
+// POST — add an existing user (by email) to the current environment
+export async function POST(req: NextRequest) {
+  const session = await getSession();
+  if (!session || !isEnvAdmin(session) || !session.currentEnvironmentId) {
+    return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
+  }
+
+  const { email } = await req.json();
+  if (!email?.trim()) return NextResponse.json({ error: "מייל נדרש" }, { status: 400 });
+
+  const db = getAdminDb();
+  const envId = session.currentEnvironmentId;
+
+  // Find user by email
+  const userSnap = await db
+    .collection(COLLECTIONS.users)
+    .where("email", "==", email.trim().toLowerCase())
+    .limit(1)
+    .get();
+
+  if (userSnap.empty) {
+    return NextResponse.json({ error: "לא נמצא משתמש עם מייל זה. המשתמש חייב להירשם קודם." }, { status: 404 });
+  }
+
+  const userId = userSnap.docs[0].id;
+
+  // Check not already a member
+  const existingSnap = await db
+    .collection(COLLECTIONS.environmentMembers)
+    .where("environmentId", "==", envId)
+    .where("userId", "==", userId)
+    .limit(1)
+    .get();
+
+  if (!existingSnap.empty) {
+    return NextResponse.json({ error: "המשתמש כבר חבר בסביבה זו" }, { status: 409 });
+  }
+
+  const now = FieldValue.serverTimestamp();
+  const memberRef = await db.collection(COLLECTIONS.environmentMembers).add({
+    environmentId: envId,
+    userId,
+    role: "user",
+    status: "approved",
+    joinedAt: now,
+    updatedAt: now,
+  });
+
+  return NextResponse.json({ ok: true, userId, memberId: memberRef.id }, { status: 201 });
 }

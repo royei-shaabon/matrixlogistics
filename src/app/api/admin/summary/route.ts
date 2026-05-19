@@ -14,6 +14,10 @@ export async function GET(req: NextRequest) {
 
   let resolvedSectionId: string;
   if (sectionId) {
+    const sectionDoc = await db.collection(COLLECTIONS.sections).doc(sectionId).get();
+    if (!sectionDoc.exists || sectionDoc.data()?.environmentId !== envId) {
+      return NextResponse.json({ error: "אין הרשאה" }, { status: 403 });
+    }
     resolvedSectionId = sectionId;
   } else {
     const activeSnap = await db

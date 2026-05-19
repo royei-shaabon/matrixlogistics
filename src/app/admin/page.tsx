@@ -31,6 +31,7 @@ export default function AdminDashboard() {
   const [requireApproval, setRequireApproval] = useState(true);
   const [togglingApproval, setTogglingApproval] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [submittedUsersCount, setSubmittedUsersCount] = useState(0);
 
   useEffect(() => {
     fetch("/api/auth/me").then((r) => r.json()).then((d) => {
@@ -51,7 +52,16 @@ export default function AdminDashboard() {
     });
     fetch("/api/admin/sessions").then((r) => r.json()).then((d) => {
       const sections: Section[] = d.sessions || [];
-      setCurrentSection(sections.find((s) => s.status === "open") || sections[0] || null);
+      const open = sections.find((s) => s.status === "open") || sections[0] || null;
+      setCurrentSection(open);
+      if (open) {
+        fetch(`/api/admin/details?sectionId=${open.id}`).then((r) => r.json()).then((dd) => {
+          const details: { userId: string; status: string }[] = dd.details || [];
+          const active = details.filter((r) => r.status !== "blocked");
+          const uniqueUsers = new Set(active.map((r) => r.userId)).size;
+          setSubmittedUsersCount(uniqueUsers);
+        });
+      }
     });
     fetch("/api/users").then((r) => r.json()).then((d) => {
       if (d.users) setPendingCount(d.users.filter((u: { memberStatus: string }) => u.memberStatus === "pending").length);
@@ -122,14 +132,18 @@ export default function AdminDashboard() {
 
       <div className="px-4 space-y-3">
         {/* KPI cards */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-[18px] p-4" style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}>
-            <p className="text-xs font-medium mb-1" style={{ color: "#64748B" }}>ממתינים לאישור</p>
-            <p className="text-3xl font-bold" style={{ color: pendingCount > 0 ? "#EF4444" : "#1E293B" }}>{pendingCount}</p>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-[18px] p-3" style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}>
+            <p className="text-[11px] font-medium mb-1 leading-tight" style={{ color: "#64748B" }}>ממתינים לאישור</p>
+            <p className="text-2xl font-bold" style={{ color: pendingCount > 0 ? "#EF4444" : "#1E293B" }}>{pendingCount}</p>
           </div>
-          <div className="rounded-[18px] p-4" style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}>
-            <p className="text-xs font-medium mb-1" style={{ color: "#64748B" }}>יחידות שהוזמנו</p>
-            <p className="text-3xl font-bold" style={{ color: "#3B82F6" }}>{totalOrders}</p>
+          <div className="rounded-[18px] p-3" style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}>
+            <p className="text-[11px] font-medium mb-1 leading-tight" style={{ color: "#64748B" }}>הגישו בקשה</p>
+            <p className="text-2xl font-bold" style={{ color: submittedUsersCount > 0 ? "#3B82F6" : "#1E293B" }}>{submittedUsersCount}</p>
+          </div>
+          <div className="rounded-[18px] p-3" style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}>
+            <p className="text-[11px] font-medium mb-1 leading-tight" style={{ color: "#64748B" }}>יחידות בסשן</p>
+            <p className="text-2xl font-bold" style={{ color: "#64748B" }}>{totalOrders}</p>
           </div>
         </div>
 
@@ -213,7 +227,7 @@ export default function AdminDashboard() {
           <button
             onClick={handleToggleApproval}
             disabled={togglingApproval}
-            className="w-full rounded-[18px] p-4 bg-white flex items-center justify-between transition-opacity"
+            className="w-full rounded-[18px] p-4 bg-white flex items-center justify-between transition-opacity cursor-pointer"
             style={{ border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)", opacity: togglingApproval ? 0.6 : 1 }}
           >
             <div className="text-right">

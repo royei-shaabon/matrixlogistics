@@ -129,10 +129,15 @@ export default function SessionsPage() {
   }, [router]);
 
   async function loadSessions() {
-    const res = await fetch("/api/admin/sessions");
-    const data = await res.json();
-    setSessions(data.sessions || []);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/admin/sessions");
+      const data = await res.json();
+      setSessions(data.sessions || []);
+    } catch {
+      // keep existing sessions on network error
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleShare(sess: Section) {
@@ -181,16 +186,18 @@ export default function SessionsPage() {
   async function handleClose(id: string) {
     if (!confirm("לסגור את הסשן?")) return;
     setSaving(id + "_close");
-    await fetch(`/api/admin/sessions/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ close: true }) });
+    const res = await fetch(`/api/admin/sessions/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ close: true }) });
     setSaving(null);
+    if (!res.ok) { const d = await res.json(); alert(d.error || "שגיאה בסגירה"); return; }
     loadSessions();
   }
 
   async function handleRename(id: string) {
     if (!editName.trim()) return;
     setSaving(id + "_rename");
-    await fetch(`/api/admin/sessions/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: editName }) });
+    const res = await fetch(`/api/admin/sessions/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: editName }) });
     setSaving(null);
+    if (!res.ok) { const d = await res.json(); alert(d.error || "שגיאה בשינוי שם"); return; }
     setEditId(null);
     loadSessions();
   }
@@ -282,9 +289,24 @@ export default function SessionsPage() {
                 <input type="datetime-local" value={endAt} onChange={(e) => setEndAt(e.target.value)} required className="w-full border focus:outline-none focus:ring-2 focus:ring-blue-400" style={{ height: "44px", borderRadius: "12px", borderColor: "#DCE7F3", background: "#F8FAFC", fontSize: "14px", padding: "0 6px", minWidth: 0 }} />
               </div>
             </div>
-            <button type="submit" disabled={creating || !newName.trim() || !startAt || !endAt} className="w-full text-white font-semibold text-sm transition-all" style={{ height: "44px", borderRadius: "12px", background: creating ? "#93C5FD" : "#3B82F6" }}>
-              {creating ? "יוצר..." : "פתח סשן"}
-            </button>
+            {(() => {
+              const formReady = newName.trim() && startAt && endAt;
+              return (
+                <button
+                  type="submit"
+                  disabled={creating || !formReady}
+                  className="w-full font-semibold text-sm transition-all"
+                  style={{
+                    height: "44px", borderRadius: "12px",
+                    background: creating ? "#93C5FD" : formReady ? "#3B82F6" : "#E2E8F0",
+                    color: formReady || creating ? "#FFFFFF" : "#94A3B8",
+                    cursor: formReady ? "pointer" : "not-allowed",
+                  }}
+                >
+                  {creating ? "יוצר..." : "פתח סשן"}
+                </button>
+              );
+            })()}
             {createError && (
               <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FEF2F2", border: "1px solid #FECACA" }}>
                 <p className="font-medium mb-2" style={{ color: "#EF4444" }}>{createError}</p>

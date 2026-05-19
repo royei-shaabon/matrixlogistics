@@ -169,7 +169,7 @@ export default function OrderPage() {
           </div>
         ) : (
           <div className="rounded-[18px] p-4 text-sm" style={{ background: "#FFFBEB", border: "1px solid #FDE68A", color: "#92400E" }}>
-            לא הוגדר חלון הגשה על ידי המנהל עדיין.
+            לא הוגדר סשן על ידי המנהל עדיין.
           </div>
         )}
 
@@ -184,10 +184,10 @@ export default function OrderPage() {
             </div>
             <button
               onClick={() => setSaved(false)}
-              className="text-xs font-semibold px-3 py-1.5 rounded-xl transition-colors flex-shrink-0"
-              style={{ background: "#DCFCE7", color: "#15803D" }}
+              className="text-sm font-semibold px-4 py-2 rounded-xl transition-colors flex-shrink-0"
+              style={{ background: "#3B82F6", color: "#FFFFFF" }}
             >
-              ערוך
+              ערוך בקשה
             </button>
           </div>
         )}
@@ -195,6 +195,14 @@ export default function OrderPage() {
         {!windowOpen && hasPreviousOrder && (
           <div className="rounded-[18px] px-4 py-3 flex items-center gap-2" style={{ background: "#F8FAFC", border: "1px solid #DCE7F3" }}>
             <span className="text-sm" style={{ color: "#64748B" }}>הבקשה האחרונה שלך (לצפייה בלבד)</span>
+          </div>
+        )}
+
+        {!windowOpen && !hasPreviousOrder && (
+          <div className="rounded-[18px] p-8 text-center" style={{ background: "#FFFFFF", border: "1px solid #DCE7F3", boxShadow: "0px 4px 12px rgba(15,23,42,0.06)" }}>
+            <div className="text-3xl mb-3">📋</div>
+            <p className="text-sm font-semibold mb-1" style={{ color: "#1E293B" }}>אין סשן פעיל כרגע</p>
+            <p className="text-xs leading-relaxed" style={{ color: "#64748B" }}>כשמנהל יפתח סשן הגשה, תוכל להגיש את בקשתך כאן</p>
           </div>
         )}
 
