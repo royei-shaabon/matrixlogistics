@@ -12,7 +12,7 @@ const heebo = Heebo({
 export const metadata: Metadata = {
   metadataBase: new URL("https://get-supply.web.app"),
   title: "Get Supply — מערכת הזמנות ציוד",
-  description: "ניהול הזמנות ציוד בצורה מסודרת. פתיחת חלונות הזמנה, איסוף כמויות ודוחות מסכמים — במקום אחד.",
+  description: "אפליקציה לאיסוף וניהול לוגיסטיקה",
   manifest: "/manifest.json",
   icons: {
     icon: "/icon.png",
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Get Supply — מערכת הזמנות ציוד",
-    description: "ניהול הזמנות ציוד בצורה מסודרת. בלי וואטסאפ, בלי אקסלים, בלי בלאגן.",
+    description: "אפליקציה לאיסוף וניהול לוגיסטיקה",
     url: "https://get-supply.web.app",
     siteName: "Get Supply",
     locale: "he_IL",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Get Supply — מערכת הזמנות ציוד",
-    description: "ניהול הזמנות ציוד בצורה מסודרת.",
+    description: "אפליקציה לאיסוף וניהול לוגיסטיקה",
   },
 };
 
