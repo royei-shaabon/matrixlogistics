@@ -31,11 +31,20 @@ export const metadata: Metadata = {
     siteName: "Get Supply",
     locale: "he_IL",
     type: "website",
+    images: [
+      {
+        url: "https://get-supply.web.app/icon.png",
+        width: 512,
+        height: 512,
+        type: "image/png",
+      },
+    ],
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: "Get Supply — מערכת הזמנות ציוד",
     description: "אפליקציה לאיסוף וניהול לוגיסטיקה",
+    images: ["https://get-supply.web.app/icon.png"],
   },
 };
 

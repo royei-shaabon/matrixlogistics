@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 interface Section {
   id: string;
@@ -56,8 +57,8 @@ const SECTIONS: Section[] = [
     content: (
       <div className="space-y-4">
         <p className="text-sm leading-relaxed" style={{ color: "#334155" }}>
-          <strong>Matrix Supply Order</strong> היא מערכת לניהול הזמנות ציוד בצורה מסודרת ומרוכזת.
-          במקום הודעות מפוזרות, טבלאות אקסל וטעויות ידניות — כל ההזמנות מרוכזות במקום אחד.
+          <strong>Get Supply</strong> היא מערכת לניהול הזמנות ציוד בצורה מסודרת ומרוכזת.
+          במקום הודעות מפוזרות, טבלאות אקסל וטעויות ידניות, כל ההזמנות מרוכזות במקום אחד.
         </p>
         <p className="text-sm leading-relaxed" style={{ color: "#334155" }}>
           המערכת פועלת לפי עקרון <strong>סביבות</strong>: כל קבוצה, יחידה או מחסן מקבלים סביבה נפרדת
@@ -87,11 +88,11 @@ const SECTIONS: Section[] = [
           <h4 className="text-sm font-bold" style={{ color: "#1E293B" }}>הרשמה למערכת</h4>
           <div className="space-y-2">
             <Step num={1} text="נכנסים לדף ההרשמה ובוחרים: אימייל וסיסמה, או התחברות מהירה עם Google." />
-            <Step num={2} text="ממלאים שם מלא ומספר טלפון — אלו יופיעו בהזמנות שלכם." />
-            <Step num={3} text="לאחר ההרשמה מגיעים לדף 'הסביבות שלי' ומשם מתחילים." />
+            <Step num={2} text="ממלאים שם מלא ומספר טלפון. אלו יופיעו בהזמנות שלכם." />
+            <Step num={3} text="לאחר ההרשמה מגיעים לדף הסביבות שלי ומשם מתחילים." />
           </div>
         </div>
-        <Tip text="אם כבר קיבלתם קוד הזמנה ממנהל — הירשמו ואז הצטרפו עם הקוד." />
+        <Tip text="אם כבר קיבלתם קוד הזמנה ממנהל, הירשמו ואז הצטרפו עם הקוד." />
       </div>
     ),
   },
@@ -103,17 +104,17 @@ const SECTIONS: Section[] = [
         <div className="space-y-3">
           <h4 className="text-sm font-bold" style={{ color: "#1E293B" }}>הצטרפות עם קוד הזמנה</h4>
           <div className="space-y-2">
-            <Step num={1} text="נכנסים ל'הסביבות שלי'." />
-            <Step num={2} text="מזינים את קוד ההזמנה שקיבלתם בשדה 'הצטרף עם קוד הזמנה'." />
-            <Step num={3} text="לוחצים 'הצטרף'. אם הסביבה דורשת אישור — תועברו לסטטוס 'ממתין'." />
+            <Step num={1} text="נכנסים לדף הסביבות שלי." />
+            <Step num={2} text="מזינים את קוד ההזמנה שקיבלתם בשדה הצטרף עם קוד הזמנה." />
+            <Step num={3} text="לוחצים הצטרף. אם הסביבה דורשת אישור, תועברו לסטטוס ממתין." />
           </div>
         </div>
         <div className="space-y-3">
           <h4 className="text-sm font-bold" style={{ color: "#1E293B" }}>יצירת סביבה חדשה</h4>
           <div className="space-y-2">
-            <Step num={1} text="לוחצים 'צור סביבה חדשה'." />
+            <Step num={1} text="לוחצים צור סביבה חדשה." />
             <Step num={2} text="ממלאים שם ותיאור (אופציונלי)." />
-            <Step num={3} text="הסביבה נכנסת לסטטוס 'ממתין לאישור' — Super Admin יאשר אותה." />
+            <Step num={3} text="הסביבה נכנסת לסטטוס ממתין לאישור. Super Admin יאשר אותה." />
           </div>
         </div>
         <Note text="לא ניתן להזמין פריטים עד שהסביבה מאושרת ויש חלון הזמנה פתוח." />
@@ -128,10 +129,10 @@ const SECTIONS: Section[] = [
         <div className="space-y-3">
           <h4 className="text-sm font-bold" style={{ color: "#1E293B" }}>שלבי הגשה</h4>
           <div className="space-y-2">
-            <Step num={1} text="נכנסים לסביבה הרצויה מדף 'הסביבות שלי'." />
-            <Step num={2} text="כאשר יש חלון הזמנה פתוח — מוצגת רשימת הפריטים הזמינים." />
+            <Step num={1} text="נכנסים לסביבה הרצויה מדף הסביבות שלי." />
+            <Step num={2} text="כאשר יש חלון הזמנה פתוח, מוצגת רשימת הפריטים הזמינים." />
             <Step num={3} text="מזינים כמות לכל פריט שרוצים להזמין. 0 = לא מזמין." />
-            <Step num={4} text="לוחצים 'שלח הזמנה' — ההזמנה נשמרת מיידית." />
+            <Step num={4} text="לוחצים שלח הזמנה. ההזמנה נשמרת מיידית." />
           </div>
         </div>
         <div className="space-y-2">
@@ -140,7 +141,7 @@ const SECTIONS: Section[] = [
             כל עוד הסשן פתוח ניתן לחזור, לשנות כמויות ולשלוח מחדש. ההזמנה החדשה מחליפה את הקודמת.
           </p>
         </div>
-        <Tip text="ניתן לשלוח הזמנה עם פריטים חלקיים — לא חייבים למלא הכל." />
+        <Tip text="ניתן לשלוח הזמנה עם פריטים חלקיים. לא חייבים למלא הכל." />
         <Note text="לאחר סגירת הסשן לא ניתן יותר לשנות הזמנות." />
       </div>
     ),
@@ -157,14 +158,14 @@ const SECTIONS: Section[] = [
           <h4 className="text-sm font-bold" style={{ color: "#1E293B" }}>פתיחת חלון הזמנה חדש</h4>
           <div className="space-y-2">
             <Step num={1} text="נכנסים לפאנל הניהול." />
-            <Step num={2} text="לוחצים 'פתח סשן חדש'." />
+            <Step num={2} text="לוחצים פתח סשן חדש." />
             <Step num={3} text="מגדירים: שם הסשן, תאריך ושעת התחלה, תאריך ושעת סיום." />
-            <Step num={4} text="לוחצים 'צור'. המשתמשים יכולים להזמין מיד." />
+            <Step num={4} text="לוחצים צור. המשתמשים יכולים להזמין מיד." />
           </div>
         </div>
         <Note text="פתיחת סשן חדש סוגרת אוטומטית כל סשן פתוח קודם." />
         <div className="space-y-2">
-          <h4 className="text-sm font-bold" style={{ color: "#1E293B" }}>סגירה מוקדמת / מחיקה</h4>
+          <h4 className="text-sm font-bold" style={{ color: "#1E293B" }}>סגירה מוקדמת ומחיקה</h4>
           <p className="text-sm" style={{ color: "#64748B" }}>
             ניתן לסגור סשן לפני הזמן או למחוק סשנים ישנים ממסך הסשנים.
           </p>
@@ -181,14 +182,14 @@ const SECTIONS: Section[] = [
           <Tag text="מנהל סביבה בלבד" color="#F0FDF4" textColor="#16A34A" />
         </div>
         <p className="text-sm" style={{ color: "#334155" }}>
-          ממסך 'פריטים' בפאנל הניהול ניתן לנהל את רשימת הציוד שמשתמשים יוכלו להזמין.
+          ממסך פריטים בפאנל הניהול ניתן לנהל את רשימת הציוד שמשתמשים יוכלו להזמין.
         </p>
         <div className="space-y-2">
           {[
-            "הוספת פריט — שם, יחידה (קופסה/יחידה/ק\"ג...) וקטגוריה",
+            "הוספת פריט: שם, יחידה (קופסה/יחידה/ק\"ג...) וקטגוריה",
             "עריכת פריט קיים",
-            "הסתרת פריט — פריט מוסתר לא מוצג למשתמשים אבל נשמר במערכת",
-            "קביעת סדר תצוגה — גרירה לסדר הרצוי",
+            "הסתרת פריט: פריט מוסתר לא מוצג למשתמשים אבל נשמר במערכת",
+            "קביעת סדר תצוגה: גרירה לסדר הרצוי",
           ].map((item, i) => (
             <Step key={i} num={i + 1} text={item} />
           ))}
@@ -208,8 +209,8 @@ const SECTIONS: Section[] = [
           <div>
             <h4 className="text-sm font-bold mb-2" style={{ color: "#1E293B" }}>אישור משתמשים חדשים</h4>
             <p className="text-sm" style={{ color: "#64748B" }}>
-              כשמשתמש מצטרף לסביבה שדורשת אישור — הוא מופיע בסטטוס 'ממתין'.
-              ממסך ניהול החברים לוחצים 'אשר' להתיר לו להגיש הזמנות.
+              כשמשתמש מצטרף לסביבה שדורשת אישור, הוא מופיע בסטטוס ממתין.
+              ממסך ניהול החברים לוחצים אשר כדי לאפשר לו להגיש הזמנות.
             </p>
           </div>
           <div>
@@ -237,12 +238,12 @@ const SECTIONS: Section[] = [
           <Tag text="מנהל סביבה בלבד" color="#F0FDF4" textColor="#16A34A" />
         </div>
         <p className="text-sm" style={{ color: "#334155" }}>
-          ממסך 'סיכום' בפאנל הניהול ניתן לראות:
+          ממסך סיכום בפאנל הניהול ניתן לראות:
         </p>
         <div className="space-y-2">
           <Step num={1} text="סך הכמויות הכוללות לכל פריט מכל המשתמשים." />
-          <Step num={2} text="פירוט לפי משתמש — מי הזמין מה ובאיזה כמות." />
-          <Step num={3} text="נתוני הסשן — שם, תאריכים, מספר מגישי הזמנות." />
+          <Step num={2} text="פירוט לפי משתמש: מי הזמין מה ובאיזה כמות." />
+          <Step num={3} text="נתוני הסשן: שם, תאריכים, מספר מגישי הזמנות." />
         </div>
         <Tip text="ניתן לייצא את הדוח לקובץ PDF ישירות מהמסך." />
       </div>
@@ -271,7 +272,7 @@ const SECTIONS: Section[] = [
             solution: "סביבה חדשה דורשת אישור Super Admin. בדרך כלל האישור מגיע תוך זמן קצר.",
           },
           {
-            problem: "כפתור 'שלח הזמנה' אפור",
+            problem: "כפתור שלח הזמנה אפור",
             solution: "ודאו שמלאתם לפחות כמות אחת גדולה מ-0, ושהסשן עדיין פתוח.",
           },
         ].map(({ problem, solution }) => (
@@ -289,10 +290,10 @@ const SECTIONS: Section[] = [
     content: (
       <div className="space-y-3">
         {[
-          "סשנים נסגרים אוטומטית לפי השעה שהוגדרה — אין צורך בפעולה ידנית.",
+          "סשנים נסגרים אוטומטית לפי השעה שהוגדרה. אין צורך בפעולה ידנית.",
           "ניתן לעדכן הזמנה כמה פעמים שרוצים כל עוד הסשן פתוח.",
           "משתמש חסום לא יכול להיכנס לסביבה ולא להגיש הזמנות.",
-          "כל הנתונים נשמרים אוטומטית — אין צורך לשמור ידנית.",
+          "כל הנתונים נשמרים אוטומטית. אין צורך לשמור ידנית.",
           "המערכת עובדת בעברית ומותאמת לטלפון נייד.",
           "ניתן להיות חבר בכמה סביבות במקביל ולעבור ביניהן.",
         ].map((tip, i) => (
@@ -307,6 +308,7 @@ export default function GuidePage() {
   const [activeSection, setActiveSection] = useState("intro");
 
   const current = SECTIONS.find((s) => s.id === activeSection) || SECTIONS[0];
+  const currentIdx = SECTIONS.findIndex((s) => s.id === activeSection);
 
   return (
     <div dir="rtl" style={{ background: "#F8FAFC", minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
@@ -314,10 +316,8 @@ export default function GuidePage() {
       <header style={{ background: "#FFFFFF", borderBottom: "1px solid #E2E8F0", position: "sticky", top: 0, zIndex: 50 }}>
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "#3B82F6" }}>
-              <svg width="13" height="13" fill="white" viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/></svg>
-            </div>
-            <span className="text-sm font-bold" style={{ color: "#1E293B" }}>Matrix Supply</span>
+            <Image src="/icon.png" alt="Get Supply" width={28} height={28} className="rounded-lg" />
+            <span className="text-sm font-bold" style={{ color: "#1E293B" }}>Get Supply</span>
           </Link>
           <div className="flex gap-2">
             <Link href="/faq" className="text-xs font-medium px-3 py-1.5 rounded-lg" style={{ color: "#64748B" }}>שאלות נפוצות</Link>
@@ -329,13 +329,13 @@ export default function GuidePage() {
       {/* Hero */}
       <div className="py-10 text-center px-4" style={{ background: "#FFFFFF", borderBottom: "1px solid #E2E8F0" }}>
         <h1 className="text-3xl font-black mb-2" style={{ color: "#1E293B" }}>מדריך שימוש</h1>
-        <p className="text-sm" style={{ color: "#64748B" }}>כל מה שצריך לדעת — שלב אחר שלב.</p>
+        <p className="text-sm" style={{ color: "#64748B" }}>כל מה שצריך לדעת, שלב אחר שלב.</p>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="grid md:grid-cols-[220px_1fr] gap-6">
 
-          {/* Sidebar — desktop */}
+          {/* Sidebar - desktop */}
           <aside className="hidden md:block">
             <nav className="sticky top-20 space-y-1">
               {SECTIONS.map((s) => (
@@ -376,30 +376,30 @@ export default function GuidePage() {
               {current.content}
             </div>
 
-            {/* Navigation buttons */}
+            {/* Navigation buttons - הבא on right, הקודם on left */}
             <div className="flex justify-between mt-4">
-              {SECTIONS.findIndex((s) => s.id === activeSection) > 0 ? (
+              {currentIdx < SECTIONS.length - 1 ? (
                 <button
-                  onClick={() => setActiveSection(SECTIONS[SECTIONS.findIndex((s) => s.id === activeSection) - 1].id)}
-                  className="text-sm font-medium px-4 py-2 rounded-xl border"
-                  style={{ color: "#64748B", borderColor: "#E2E8F0", background: "#FFFFFF" }}
-                >
-                  ← הקודם
-                </button>
-              ) : <div />}
-              {SECTIONS.findIndex((s) => s.id === activeSection) < SECTIONS.length - 1 ? (
-                <button
-                  onClick={() => setActiveSection(SECTIONS[SECTIONS.findIndex((s) => s.id === activeSection) + 1].id)}
+                  onClick={() => setActiveSection(SECTIONS[currentIdx + 1].id)}
                   className="text-sm font-bold px-4 py-2 rounded-xl"
                   style={{ background: "#3B82F6", color: "#FFFFFF" }}
                 >
-                  הבא →
+                  הבא
                 </button>
               ) : (
                 <Link href="/register" className="text-sm font-bold px-4 py-2 rounded-xl" style={{ background: "#3B82F6", color: "#FFFFFF" }}>
-                  התחל עכשיו →
+                  הרשמה
                 </Link>
               )}
+              {currentIdx > 0 ? (
+                <button
+                  onClick={() => setActiveSection(SECTIONS[currentIdx - 1].id)}
+                  className="text-sm font-medium px-4 py-2 rounded-xl border"
+                  style={{ color: "#64748B", borderColor: "#E2E8F0", background: "#FFFFFF" }}
+                >
+                  הקודם
+                </button>
+              ) : <div />}
             </div>
           </main>
         </div>

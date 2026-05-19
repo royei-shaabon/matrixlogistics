@@ -55,6 +55,15 @@ function CalendarIcon() {
   );
 }
 
+function GlobeIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
+    </svg>
+  );
+}
 
 interface BottomNavProps {
   isAdmin?: boolean;
@@ -74,6 +83,10 @@ export default function BottomNav({ isAdmin, pendingCount }: BottomNavProps) {
           <Link href="/order" className="flex-1 flex flex-col items-center justify-center py-3" style={{ color: pathname === "/order" ? "#3B82F6" : "#94A3B8" }}>
             <ClipboardIcon />
             <span className="text-[11px] font-semibold mt-1">הגשת בקשה</span>
+          </Link>
+          <Link href="/" className="flex-1 flex flex-col items-center justify-center py-3" style={{ color: "#94A3B8" }}>
+            <GlobeIcon />
+            <span className="text-[11px] font-medium mt-1">לאתר</span>
           </Link>
         </div>
       </nav>
@@ -117,6 +130,10 @@ export default function BottomNav({ isAdmin, pendingCount }: BottomNavProps) {
             </Link>
           );
         })}
+        <Link href="/" className="flex-1 flex flex-col items-center justify-center py-3" style={{ color: "#94A3B8" }}>
+          <GlobeIcon />
+          <span className="text-[11px] font-medium mt-1">לאתר</span>
+        </Link>
       </div>
     </nav>
   );

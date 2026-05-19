@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 interface FAQ {
   q: string;
@@ -15,7 +16,7 @@ interface Category {
 
 const CATEGORIES: Category[] = [
   {
-    title: "משתמשים — הגשת הזמנות",
+    title: "משתמשים - הגשת הזמנות",
     items: [
       {
         q: "איך מגישים הזמנה?",
@@ -35,10 +36,10 @@ const CATEGORIES: Category[] = [
       },
       {
         q: "איך מצטרפים לסביבה?",
-        a: "מקבלים קוד הזמנה מהמנהל, נכנסים ל'הסביבות שלי', ולוחצים על 'הצטרף עם קוד הזמנה'.",
+        a: "מקבלים קוד הזמנה מהמנהל, נכנסים לדף הסביבות שלי, ולוחצים על הצטרף עם קוד הזמנה.",
       },
       {
-        q: "שכחתי את קוד ההזמנה — מה עושים?",
+        q: "שכחתי את קוד ההזמנה, מה עושים?",
         a: "פונים למנהל הסביבה, שיכול לאחזר את הקוד מפאנל הניהול ולשלוח אותו שוב.",
       },
     ],
@@ -48,7 +49,7 @@ const CATEGORIES: Category[] = [
     items: [
       {
         q: "איך פותחים חלון הזמנה?",
-        a: "נכנסים לפאנל הניהול → סשנים → לוחצים 'פתח סשן חדש' → מגדירים שם, תאריך ושעת התחלה וסיום.",
+        a: "נכנסים לפאנל הניהול, סשנים, לוחצים פתח סשן חדש ומגדירים שם, תאריך ושעת התחלה וסיום.",
       },
       {
         q: "האם אפשר לסגור סשן לפני הזמן?",
@@ -60,7 +61,7 @@ const CATEGORIES: Category[] = [
       },
       {
         q: "איך מאשרים משתמש חדש שהצטרף?",
-        a: "נכנסים לניהול → ניהול חברים → רואים את המשתמשים הממתינים → לוחצים 'אשר'.",
+        a: "נכנסים לניהול, ניהול חברים, רואים את המשתמשים הממתינים ולוחצים אשר.",
       },
       {
         q: "האם אפשר לחסום משתמש?",
@@ -89,15 +90,15 @@ const CATEGORIES: Category[] = [
       },
       {
         q: "האם ההזמנות נשמרות אוטומטית?",
-        a: "כן. ברגע לחיצה על 'שלח הזמנה' כל הנתונים נשמרים ומוצגים בדוח המנהל מיידית.",
+        a: "כן. ברגע לחיצה על שלח הזמנה כל הנתונים נשמרים ומוצגים בדוח המנהל מיידית.",
       },
       {
         q: "מה קורה אם נוצרה סביבה חדשה?",
-        a: "הסביבה נכנסת לסטטוס 'ממתין לאישור' — Super Admin צריך לאשר אותה לפני שהמשתמשים יוכלו להזמין.",
+        a: "הסביבה נכנסת לסטטוס ממתין לאישור. Super Admin צריך לאשר אותה לפני שהמשתמשים יוכלו להזמין.",
       },
       {
         q: "האם ניתן להיות חבר בכמה סביבות?",
-        a: "כן. ניתן להיות חבר בסביבות מרובות ולעבור ביניהן מדף 'הסביבות שלי'.",
+        a: "כן. ניתן להיות חבר בסביבות מרובות ולעבור ביניהן מדף הסביבות שלי.",
       },
     ],
   },
@@ -142,8 +143,7 @@ export default function FAQPage() {
     ? CATEGORIES.map((cat) => ({
         ...cat,
         items: cat.items.filter(
-          (item) =>
-            item.q.includes(search) || item.a.includes(search)
+          (item) => item.q.includes(search) || item.a.includes(search)
         ),
       })).filter((cat) => cat.items.length > 0)
     : CATEGORIES;
@@ -154,10 +154,8 @@ export default function FAQPage() {
       <header style={{ background: "#FFFFFF", borderBottom: "1px solid #E2E8F0" }}>
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "#3B82F6" }}>
-              <svg width="13" height="13" fill="white" viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/></svg>
-            </div>
-            <span className="text-sm font-bold" style={{ color: "#1E293B" }}>Matrix Supply</span>
+            <Image src="/icon.png" alt="Get Supply" width={28} height={28} className="rounded-lg" />
+            <span className="text-sm font-bold" style={{ color: "#1E293B" }}>Get Supply</span>
           </Link>
           <div className="flex gap-2">
             <Link href="/guide" className="text-xs font-medium px-3 py-1.5 rounded-lg" style={{ color: "#64748B" }}>מדריך שימוש</Link>
@@ -170,7 +168,6 @@ export default function FAQPage() {
       <div className="py-12 text-center px-4">
         <h1 className="text-3xl font-black mb-3" style={{ color: "#1E293B" }}>שאלות נפוצות</h1>
         <p className="text-base mb-8" style={{ color: "#64748B" }}>כל מה שצריך לדעת על מערכת ההזמנות.</p>
-        {/* Search */}
         <div className="max-w-sm mx-auto relative">
           <input
             type="text"
